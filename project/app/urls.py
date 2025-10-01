@@ -3,5 +3,5 @@ from django.urls import path
 from . import views
 
 urlpatterns = [
-    path("health/", views.json, name="json"),
+    path("health/", views.ping, name="ping"),
 ]
