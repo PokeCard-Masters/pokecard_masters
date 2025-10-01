@@ -4,4 +4,5 @@ from . import views
 
 urlpatterns = [
     path("health/", views.ping, name="ping"),
+    path("", views.index, name="index"),
 ]

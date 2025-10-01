@@ -4,3 +4,6 @@ from django.http import JsonResponse
 # Create your views here.
 def ping(request):
     return JsonResponse({"ping":"pong"})
+
+def index(request):
+    return render(request, 'index.html')
