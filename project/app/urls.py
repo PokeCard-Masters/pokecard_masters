@@ -1,7 +1,8 @@
 from django.urls import path
 
-from . import views 
+from . import views
 
-urlpatterns = [ 
+urlpatterns = [
+    path("health/", views.ping, name="ping"),
     path("", views.index, name="index"),
 ]
