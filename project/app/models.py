@@ -9,6 +9,8 @@ class pokemon(models.Model):
     id = models.AutoField(primary_key=True)
     name = models.CharField(max_length=200)
     type = models.CharField(choices=type_choice)
+    image = models.CharField(null=True)
+    card_id = models.IntegerField(max_length=100)
 
 # Create your models here.
 
