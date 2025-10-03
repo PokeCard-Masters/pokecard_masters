@@ -1,17 +1,11 @@
 from django.db import models
 
 class pokemon(models.Model):
-    type_choice = [
-        ("Fire", "Fire"),
-        ("Water", "Water"),
-        ("Grass", "Grass"),
-    ]
     id = models.AutoField(primary_key=True)
     name = models.CharField(max_length=200)
-    type = models.CharField(choices=type_choice)
     image = models.CharField(null=True)
-    card_id = models.IntegerField(max_length=100)
-
+    card_id = models.CharField(max_length=200)
+    
 # Create your models here.
 
 class User(models.Model):
