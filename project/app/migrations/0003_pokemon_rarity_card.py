@@ -4,25 +4,55 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('app', '0002_add_user'),
+        ("app", "0002_add_user"),
     ]
 
     operations = [
         migrations.CreateModel(
-            name='pokemon',
+            name="pokemon",
             fields=[
-                ('id', models.AutoField(primary_key=True, serialize=False)),
-                ('name', models.CharField(max_length=200)),
-                ('type', models.CharField(choices=[('Fire', 'Fire'), ('Water', 'Water'), ('Grass', 'Grass')])),
+                ("id", models.AutoField(primary_key=True, serialize=False)),
+                ("name", models.CharField(max_length=200)),
+                (
+                    "type",
+                    models.CharField(
+                        choices=[
+                            ("Fire", "Fire"),
+                            ("Water", "Water"),
+                            ("Grass", "Grass"),
+                        ]
+                    ),
+                ),
             ],
         ),
         migrations.CreateModel(
-            name='Rarity_Card',
+            name="Rarity_Card",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('type', models.CharField(choices=[('Common', 'Common'), ('Unusual', 'Unusual'), ('Rare', 'Rare'), ('Ultra Rare', 'Ultra Rare'), ('Ex', 'Ex'), ('X', 'X'), ('Full Art', 'Full Art'), ('Shiny Gold', 'Shiny Gold')])),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                (
+                    "type",
+                    models.CharField(
+                        choices=[
+                            ("Common", "Common"),
+                            ("Unusual", "Unusual"),
+                            ("Rare", "Rare"),
+                            ("Ultra Rare", "Ultra Rare"),
+                            ("Ex", "Ex"),
+                            ("X", "X"),
+                            ("Full Art", "Full Art"),
+                            ("Shiny Gold", "Shiny Gold"),
+                        ]
+                    ),
+                ),
             ],
         ),
     ]
