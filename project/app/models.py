@@ -9,4 +9,6 @@ class User(models.Model):
 
 class pokemon(models.Model):
     id = models.AutoField(primary_key=True)
+    card_id = models.IntegerField(max_length=100)
     name = models.CharField(max_length=200)
+    image = models.CharField(null=True)
