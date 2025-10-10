@@ -1,11 +1,14 @@
 from django.db import models
 
 
-class pokemon(models.Model):
+class Card(models.Model):
     id = models.AutoField(primary_key=True)
     name = models.CharField(max_length=20)
     card_id = models.CharField(max_length=10)
     image = models.CharField(max_length=200)
+    category = models.CharField(max_length=20)
+    illustrator = models.CharField(max_length=100, null=True)
+    rarity = models.CharField(max_length=50)
 
 
 # Create your models here.
