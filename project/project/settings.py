@@ -10,23 +10,33 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/5.2/ref/settings/
 """
 
+import os
 from pathlib import Path
+from dotenv import load_dotenv
+
+BASE_DIR = Path(__file__).resolve().parent.parent
+load_dotenv(BASE_DIR / ".env")
+
+ZITADEL_SERVER_URL = os.environ["ZITADEL_SERVER_URL"]
+ZITADEL_CLIENT_ID = os.environ["ZITADEL_CLIENT_ID"]
+ZITADEL_CLIENT_SECRET = os.environ["ZITADEL_CLIENT_SECRET"]
+
+OIDC_OP_LOGOUT_ENDPOINT = f"{ZITADEL_SERVER_URL}/oidc/v1/end_session"
+OIDC_RP_POST_LOGOUT_REDIRECT_URI = "http://localhost:8000/"
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
-BASE_DIR = Path(__file__).resolve().parent.parent
 
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = "django-insecure-4&8rw$wrhzj1b^cf+35^kvmvt#98#g%&d1z@+q+w+%nr^56f3+"
+SECRET_KEY = os.environ["DJANGO_SECRET_KEY"]
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
 ALLOWED_HOSTS = []
-
 
 # Application definition
 
@@ -38,6 +48,8 @@ INSTALLED_APPS = [
     "django.contrib.messages",
     "django.contrib.staticfiles",
     "app",
+    "corsheaders",
+    "mozilla_django_oidc",
 ]
 
 MIDDLEWARE = [
@@ -48,8 +60,17 @@ MIDDLEWARE = [
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
+    "corsheaders.middleware.CorsMiddleware",
+    "django.middleware.common.CommonMiddleware",
+    "mozilla_django_oidc.middleware.SessionRefresh",
 ]
 
+AUTHENTICATION_BACKENDS = [
+    "django.contrib.auth.backends.ModelBackend",
+    "mozilla_django_oidc.auth.OIDCAuthenticationBackend",
+]
+
+CORS_ALLOWED_ORIGINS = ["http://localhost:8081"]
 ROOT_URLCONF = "project.urls"
 
 TEMPLATES = [
@@ -75,9 +96,13 @@ WSGI_APPLICATION = "project.wsgi.application"
 
 DATABASES = {
     "default": {
-        "ENGINE": "django.db.backends.sqlite3",
-        "NAME": BASE_DIR / "db.sqlite3",
-    }
+        "ENGINE": "django.db.backends.mysql",
+        "NAME": "pokemon",
+        "USER": "root",
+        "PASSWORD": "root",
+        "PORT": "3306",
+        "HOST": "127.0.0.1",
+    },
 }
 
 
@@ -121,3 +146,37 @@ STATIC_URL = "static/"
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
+
+# Mozilla Django OIDC Configuration for Zitadel
+OIDC_RP_CLIENT_ID = ZITADEL_CLIENT_ID
+OIDC_RP_CLIENT_SECRET = ZITADEL_CLIENT_SECRET
+OIDC_OP_AUTHORIZATION_ENDPOINT = f"{ZITADEL_SERVER_URL}/oauth/v2/authorize"
+OIDC_OP_TOKEN_ENDPOINT = f"{ZITADEL_SERVER_URL}/oauth/v2/token"
+OIDC_OP_USER_ENDPOINT = f"{ZITADEL_SERVER_URL}/oidc/v1/userinfo"
+OIDC_OP_JWKS_ENDPOINT = f"{ZITADEL_SERVER_URL}/oauth/v2/keys"
+OIDC_RP_SIGN_ALGO = "RS256"
+OIDC_RP_SCOPES = "openid profile email"
+
+
+  # Exempt API endpoints from OIDC session middleware
+  # This allows API endpoints to use JWT authentication instead
+
+OIDC_EXEMPT_URLS = [
+    r'^/api/',
+    r'^/api/',
+    r'^/health/',
+]
+
+# Redirect URIs
+LOGIN_REDIRECT_URL = "/app/"
+LOGOUT_REDIRECT_URL = "/"
+LOGIN_URL = "/oidc/authenticate/"
+OIDC_CALLBACK_CLASS = "mozilla_django_oidc.views.OIDCAuthenticationCallbackView"
+
+# IMPORTANT: This is the redirect_uri sent to Zitadel
+# Must match what's configured in Zitadel application settings
+OIDC_RP_CALLBACK_URI = "http://localhost:8000/oidc/callback/"
+
+# Optional: Create users automatically
+OIDC_CREATE_USER = True
+OIDC_UPDATE_USER = True
