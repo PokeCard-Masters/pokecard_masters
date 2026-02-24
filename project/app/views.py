@@ -14,20 +14,6 @@ from django.contrib.auth.decorators import login_required
 ##from django.forms.models import model_to_dict
 
 
-@csrf_exempt
-def register(request):
-    if request.method == "POST":
-        form = CustomUserCreationForm(request.POST)
-        if form.is_valid():
-            user = form.save()
-            login(request, user)
-        else:
-            messages.success(request, "Error")
-    else:
-        form = CustomUserCreationForm()
-    return render(request, "register.html", {"form": form})
-
-
 def import_list(request):
     result = Card.objects.all()
     pokemon_list = []
@@ -94,6 +80,3 @@ def card(request):
     ctx = {"card": r_json, "name": name_json, "rarity": rarity_json}
 
     return render(request, "index.html", ctx)
-
-def landing(request):
-    return render(request, "index.html")
