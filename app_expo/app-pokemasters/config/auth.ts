@@ -1,6 +1,6 @@
 export const AUTH_CONFIG = {
-  clientId: "824321648124-j8626qfulj3gjc8dbp49btiks392vn78.apps.googleusercontent.com",
-  clientSecret: "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",
+  clientId: process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID ?? "",
+  clientSecret: process.env.EXPO_PUBLIC_GOOGLE_CLIENT_SECRET ?? "",
   scopes: ["openid", "profile", "email"],
 };
 
@@ -11,4 +11,4 @@ export const GOOGLE_DISCOVERY = {
   revocationEndpoint: "https://oauth2.googleapis.com/revoke",
 };
 
-export const API_BASE_URL = "http://localhost:8000";
+export const API_BASE_URL = process.env.EXPO_PUBLIC_API_BASE_URL ?? "http://localhost:8000";
