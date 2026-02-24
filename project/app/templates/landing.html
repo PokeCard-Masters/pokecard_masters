@@ -1,33 +1,35 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Document</title>
 </head>
+
 <body>
     <div class="auth-section">
         {% if user.is_authenticated %}
-          <div class="user-info">
+        <div class="user-info">
             <h3>Welcome back, {{ user.username }}!</h3>
             <p>Email: {{ user.email }}</p>
-          </div>
-          <a href="{% url 'index' %}" class="cards-btn">View My Cards</a>
-          <form method="post" action="{% url 'oidc_logout' %}" class="logout-form">
+        </div>
+        <a href="{% url 'index' %}" class="cards-btn">View My Cards</a>
+        <form method="post" action="{% url 'oidc_logout' %}" class="logout-form">
             {% csrf_token %}
             <button type="submit" class="logout-btn">Logout</button>
-          </form>
+        </form>
         {% else %}
-          <h3>Get Started</h3>
-          <p style="margin-bottom: 25px;">Sign in to access your card collection</p>
-          <a href="{% url 'oidc_authentication_init' %}" class="login-btn">
+        <h3>Get Started</h3>
+        <p style="margin-bottom: 25px;">Sign in to access your card collection</p>
+        <a href="{% url 'oidc_authentication_init' %}" class="login-btn">
             Login / Register
-          </a>
-          <p class="note">
+        </a>
+        <p class="note">
             You'll be securely authenticated via Zitadel
-          </p>
+        </p>
         {% endif %}
-      </div>
-
+    </div>
 </body>
+
 </html>

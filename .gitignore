@@ -1,3 +1,12 @@
 __pycache__/
 db.sqlite3
 .DS_Store
+
+# Environment files with secrets
+.env
+*.env.local
+project/.env
+app_expo/app-pokemasters/.env
+
+# Zitadel keys
+project/app/zitadel_service_key.json
