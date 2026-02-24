@@ -9,14 +9,11 @@ class Card(models.Model):
     rarity = models.CharField(max_length=50, null=True)
     illustrator = models.CharField(max_length=50, null=True)
 
-
-# Create your models here.
-
-
 class User(models.Model):
     id = models.AutoField(primary_key=True)
+    user_id = models.CharField(max_length=100)
     name = models.CharField(max_length=200)
-    password = models.CharField(max_length=50)
+    password = models.CharField(max_length=50, blank=True, default="")
     email = models.EmailField(max_length=200)
 
 class Rarity_Card(models.Model):
@@ -32,4 +29,7 @@ class Rarity_Card(models.Model):
     ]
     type = models.CharField(max_length=50,choices=order_rarity)
 
-
+class PlayerCard(models.Model):
+    card_user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='player_cards')
+    card = models.ForeignKey(Card, on_delete=models.CASCADE)
+    quantity = models.IntegerField(default=1)
