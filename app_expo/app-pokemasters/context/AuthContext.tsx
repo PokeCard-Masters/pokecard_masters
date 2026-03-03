@@ -5,8 +5,8 @@ import * as WebBrowser from "expo-web-browser";
 import * as SecureStore from "expo-secure-store";
 import { AUTH_CONFIG, GOOGLE_DISCOVERY } from "@/config/auth";
 import { apiFetch } from "@/services/api";
+import { API_BASE_URL } from "@/config/auth";
 
-// SecureStore doesn't work on web — fall back to localStorage
 const storage = {
   getItem: async (key: string): Promise<string | null> => {
     if (Platform.OS === "web") return localStorage.getItem(key);
@@ -28,6 +28,8 @@ type AuthState = {
   token: string | null;
   isLoading: boolean;
   signIn: () => Promise<void>;
+  signInWithPassword: (email: string, password: string) => Promise<string | null>;
+  register: (name: string, email: string, password: string) => Promise<string | null>;
   signOut: () => Promise<void>;
 };
 
@@ -35,6 +37,8 @@ const AuthContext = createContext<AuthState>({
   token: null,
   isLoading: true,
   signIn: async () => {},
+  signInWithPassword: async () => null,
+  register: async () => null,
   signOut: async () => {},
 });
 
@@ -42,7 +46,7 @@ export function useAuth() {
   return useContext(AuthContext);
 }
 
-const TOKEN_KEY = "google_id_token";
+const TOKEN_KEY = "auth_token";
 const REFRESH_KEY = "google_refresh_token";
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
@@ -62,7 +66,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     GOOGLE_DISCOVERY
   );
 
-  // Restore token on app start
   useEffect(() => {
     storage.getItem(TOKEN_KEY).then((saved) => {
       if (saved) setToken(saved);
@@ -70,7 +73,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     });
   }, []);
 
-  // Handle auth response
   useEffect(() => {
     if (response?.type === "success" && request) {
       const { code } = response.params;
@@ -91,7 +93,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           if (tokenResponse.refreshToken) {
             storage.setItem(REFRESH_KEY, tokenResponse.refreshToken);
           }
-          // Register/sync user in Django backend
           await apiFetch("/api/me", idToken);
         }
       });
@@ -102,6 +103,44 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     await promptAsync();
   }, [promptAsync]);
 
+  const signInWithPassword = useCallback(async (email: string, password: string): Promise<string | null> => {
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/auth/login`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        return data.detail || "Login failed.";
+      }
+      setToken(data.token);
+      await storage.setItem(TOKEN_KEY, data.token);
+      return null;
+    } catch {
+      return "Network error. Please try again.";
+    }
+  }, []);
+
+  const register = useCallback(async (name: string, email: string, password: string): Promise<string | null> => {
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/auth/register`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password, name }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        return data.detail || "Registration failed.";
+      }
+      setToken(data.token);
+      await storage.setItem(TOKEN_KEY, data.token);
+      return null;
+    } catch {
+      return "Network error. Please try again.";
+    }
+  }, []);
+
   const signOut = useCallback(async () => {
     setToken(null);
     await storage.deleteItem(TOKEN_KEY);
@@ -109,7 +148,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   return (
-    <AuthContext.Provider value={{ token, isLoading, signIn, signOut }}>
+    <AuthContext.Provider value={{ token, isLoading, signIn, signInWithPassword, register, signOut }}>
       {children}
     </AuthContext.Provider>
   );
