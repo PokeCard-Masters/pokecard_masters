@@ -13,3 +13,6 @@ app_expo/app-pokemasters/.env
 
 # Zitadel keys
 project/app/zitadel_service_key.json
+
+# Claude
+CLAUDE.md
