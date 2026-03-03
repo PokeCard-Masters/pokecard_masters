@@ -1,18 +1,28 @@
 from django.shortcuts import render
 from django.http import JsonResponse
 import requests
-from .models import Card
-from .forms import CustomUserCreationForm
-from django.views.decorators.csrf import csrf_exempt
-from django.contrib.auth import login
-from django.contrib import messages
+from .models import Card, PlayerCard
 from django.contrib.auth.decorators import login_required
+from rest_framework.decorators import api_view
+from rest_framework.response import Response
 
-
-##from django.views.decorators.http import require_http_methods
-##from django.shortcuts import get_object_or_404
-##from django.forms.models import model_to_dict
-
+@api_view(['GET'])
+def view_card(request):
+    if request.user.is_authenticated:
+        queryset = PlayerCard.objects.filter(card_user=request.user)
+    data = [
+        {
+            "id": pc.id,
+            "name": pc.card.name,
+            "image": pc.card.image,
+            "category": pc.card.category,
+            "rarity": pc.card.rarity,
+            "illustrator": pc.card.illustrator,
+            "quantity": pc.quantity,
+        }
+        for pc in queryset
+    ]
+    return Response(data)
 
 def import_list(request):
     result = Card.objects.all()
@@ -28,7 +38,9 @@ def import_list(request):
                 "Illustrator: ": pok.illustrator,
             }
         )
-    return JsonResponse({"success": pokemon_list})
+        return JsonResponse({"success": pokemon_list})
+    else:
+        return JsonResponse({"error": "Non authentifié"}, status=401)
 
 
 def import_api(request):
@@ -80,3 +92,7 @@ def card(request):
     ctx = {"card": r_json, "name": name_json, "rarity": rarity_json}
 
     return render(request, "index.html", ctx)
+
+def landing(request):
+    return render(request, "index.html")
+

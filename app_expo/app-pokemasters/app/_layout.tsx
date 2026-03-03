@@ -3,7 +3,6 @@ import { Stack, useRouter, useSegments } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { useEffect } from "react";
 import "react-native-reanimated";
-
 import { useColorScheme } from "@/hooks/use-color-scheme";
 import { AuthProvider, useAuth } from "@/context/AuthContext";
 
@@ -20,15 +19,22 @@ function RootNavigator() {
     if (!token && !inAuthGroup) {
       router.replace("/(auth)/login");
     } else if (token && inAuthGroup) {
-      router.replace("/(tabs)");
+      router.replace("/");
     }
   }, [token, isLoading, segments]);
 
   return (
     <Stack>
-      <Stack.Screen name="(auth)" options={{ headerShown: false }} />
-      <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-      <Stack.Screen name="modal" options={{ presentation: "modal", title: "Modal" }} />
+      <Stack.Screen
+        name="(auth)"
+        options={{ headerShown: false }}
+      />
+      <Stack.Screen
+        name="(tabs)"
+        options={{
+          headerShown: false,
+        }}
+      />
     </Stack>
   );
 }
@@ -44,4 +50,4 @@ export default function RootLayout() {
       <StatusBar style="auto" />
     </ThemeProvider>
   );
-}
+};

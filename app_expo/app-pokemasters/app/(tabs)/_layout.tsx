@@ -1,35 +1,65 @@
+import { Ionicons, MaterialIcons } from '@expo/vector-icons';
+import { StatusBar } from 'expo-status-bar';
 import { Tabs } from 'expo-router';
-import React from 'react';
 
-import { HapticTab } from '@/components/haptic-tab';
-import { IconSymbol } from '@/components/ui/icon-symbol';
-import { Colors } from '@/constants/theme';
-import { useColorScheme } from '@/hooks/use-color-scheme';
-
-export default function TabLayout() {
-  const colorScheme = useColorScheme();
-
-  return (
-    <Tabs
-      screenOptions={{
-        tabBarActiveTintColor: Colors[colorScheme ?? 'light'].tint,
-        headerShown: false,
-        tabBarButton: HapticTab,
-      }}>
-      <Tabs.Screen
-        name="index"
-        options={{
-          title: 'Home',
-          tabBarIcon: ({ color }) => <IconSymbol size={28} name="house.fill" color={color} />,
-        }}
-      />
-      <Tabs.Screen
-        name="explore"
-        options={{
-          title: 'Explore',
-          tabBarIcon: ({ color }) => <IconSymbol size={28} name="paperplane.fill" color={color} />,
-        }}
-      />
-    </Tabs>
-  );
+export default function TabsLayout() {
+    return (
+        <>
+            <StatusBar style="auto" />
+            <Tabs
+                screenOptions={{
+                    tabBarActiveTintColor: '#9B9EF0',
+                    headerStyle: {
+                        backgroundColor: '#F8F8FF'
+                    },
+                    headerShadowVisible: false,
+                    headerTintColor: '#2F265F',
+                    headerTitleAlign: 'center',
+                    tabBarStyle: {
+                        backgroundColor: '#F8F8FF',
+                    },
+                }}>
+                <Tabs.Screen
+                    name='index'
+                    options={{
+                        headerTitle: 'Menu',
+                        headerLeft: () => <></>,
+                        tabBarIcon: ({ focused, color }) => (
+                            <Ionicons
+                                name={focused ? "home-sharp" : "home-outline"}
+                                color={color}
+                                size={20}
+                            />
+                        )
+                    }}
+                />
+                <Tabs.Screen
+                    name='about'
+                    options={{
+                        headerTitle: 'Jouer',
+                        tabBarIcon: ({ focused, color }) => (
+                            <Ionicons
+                                name={focused ? "game-controller-sharp" : "game-controller-outline"}
+                                color={color}
+                                size={20}
+                            />
+                        )
+                    }}
+                />
+                <Tabs.Screen
+                    name="pokedex"
+                    options={{
+                        headerTitle: 'Pokedex',
+                        tabBarIcon: ({ color }) => (
+                            <MaterialIcons
+                                name='catching-pokemon'
+                                color={color}
+                                size={20}
+                            />
+                        )
+                    }}
+                />
+            </Tabs>
+        </>
+    );
 }

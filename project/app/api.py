@@ -2,7 +2,7 @@ import uuid
 from ninja import NinjaAPI, Schema
 from typing import List
 from django.contrib.auth.hashers import make_password, check_password
-from .models import Card, User
+from .models import Card, User, PlayerCard
 from .authentification import GoogleJWTAuth, create_app_jwt
 
 jwt_auth = GoogleJWTAuth()
@@ -71,6 +71,25 @@ def get_me(request):
         user.save()
 
     return user
+
+@api.get("/player/card", auth=jwt_auth)
+def view_card(request):
+    claims = request.auth_user
+    user_id = claims["sub"]
+    queryset = PlayerCard.objects.select_related('card').filter(card_user__user_id=user_id)
+    data = [
+        {
+            "id": pc.id,
+            "name": pc.card.name,
+            "image": pc.card.image,
+            "category": pc.card.category,
+            "rarity": pc.card.rarity,
+            "illustrator": pc.card.illustrator,
+            "quantity": pc.quantity,
+        }
+        for pc in queryset
+    ]
+    return data
 
 
 @api.post("/auth/register", response={201: TokenOut, 409: ErrorOut, 400: ErrorOut})
