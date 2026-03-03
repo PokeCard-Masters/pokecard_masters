@@ -13,8 +13,8 @@ class User(models.Model):
     id = models.AutoField(primary_key=True)
     user_id = models.CharField(max_length=100)
     name = models.CharField(max_length=200)
-    password = models.CharField(max_length=50, blank=True, default="")
-    email = models.EmailField(max_length=200)
+    password = models.CharField(max_length=128, blank=True, default="")
+    email = models.EmailField(max_length=200, unique=True)
 
 class Rarity_Card(models.Model):
     order_rarity = [
