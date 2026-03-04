@@ -3,7 +3,7 @@ import { Text, Pressable, View, StyleSheet } from "react-native";
 import { useAuth } from '@/context/AuthContext';
 
 export default function Index() {
-  const { token, signIn, signOut } = useAuth();
+  const { signOut } = useAuth();
 
   return (
     <View style={styles.container}>

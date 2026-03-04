@@ -1,7 +1,4 @@
 import { StyleSheet, View, Text, FlatList, Image } from 'react-native';
-
-import * as SecureStore from 'expo-secure-store';
-
 import { useEffect, useState } from 'react';
 
 type Pokemon = {
@@ -19,7 +16,6 @@ export default function Pokedex() {
 
   const getData = async () => {
     const token = await localStorage.getItem('auth_token');
-    console.log('Token:', token);
     const response = await fetch('http://localhost:8000/api/player/card', {
       headers: {
         'Authorization': `Bearer ${token}`,

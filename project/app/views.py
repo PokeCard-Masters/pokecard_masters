@@ -6,7 +6,8 @@ from django.contrib.auth.decorators import login_required
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 
-@api_view(['GET'])
+
+@api_view(["GET"])
 def view_card(request):
     if request.user.is_authenticated:
         queryset = PlayerCard.objects.filter(card_user=request.user)
@@ -24,6 +25,7 @@ def view_card(request):
     ]
     return Response(data)
 
+
 def import_list(request):
     result = Card.objects.all()
     pokemon_list = []
@@ -38,10 +40,8 @@ def import_list(request):
                 "Illustrator: ": pok.illustrator,
             }
         )
-        return JsonResponse({"success": pokemon_list})
-    else:
-        return JsonResponse({"error": "Non authentifié"}, status=401)
-
+    return JsonResponse({"success": pokemon_list})
+    
 
 def import_api(request):
     r = requests.get("https://api.tcgdex.net/v2/en/cards")
@@ -76,6 +76,7 @@ def import_api(request):
             print(f"{i['name']} does not have image")
     return JsonResponse({"success": "ok"})
 
+
 @login_required
 def index(request):
     pokemons = Card.objects.all()
@@ -93,6 +94,6 @@ def card(request):
 
     return render(request, "index.html", ctx)
 
+
 def landing(request):
     return render(request, "index.html")
-
