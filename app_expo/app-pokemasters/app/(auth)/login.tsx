@@ -35,7 +35,6 @@ export default function LoginScreen() {
     <View style={styles.container}>
       <Text style={styles.title}>PokeMasters</Text>
       <Text style={styles.subtitle}>Sign in to manage your collection</Text>
-
       <TextInput
         style={styles.input}
         placeholder="Email"
@@ -75,9 +74,23 @@ export default function LoginScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, justifyContent: "center", alignItems: "center", padding: 20 },
-  title: { fontSize: 32, fontWeight: "bold", marginBottom: 8 },
-  subtitle: { fontSize: 16, color: "#666", marginBottom: 32 },
+  container: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 20,
+  },
+  title: {
+    justifyContent: 'center',
+    alignContent: 'center',
+    fontSize: 50,
+    color: 'black',
+  },
+  subtitle: {
+    fontSize: 16,
+    color: "#666",
+    marginBottom: 32
+  },
   input: {
     width: "100%",
     maxWidth: 320,
@@ -108,9 +121,31 @@ const styles = StyleSheet.create({
     maxWidth: 320,
     alignItems: "center",
   },
-  buttonText: { color: "#fff", fontSize: 16, fontWeight: "600" },
-  link: { color: "#2563eb", fontSize: 14, marginBottom: 16 },
-  divider: { flexDirection: "row", alignItems: "center", width: "100%", maxWidth: 320, marginBottom: 16 },
-  dividerLine: { flex: 1, height: 1, backgroundColor: "#ccc" },
-  dividerText: { marginHorizontal: 12, color: "#666", fontSize: 14 },
+  buttonText: {
+    color: "#fff",
+    fontSize: 16,
+    fontWeight: "600"
+  },
+  link: {
+    color: "#2563eb",
+    fontSize: 14,
+    marginBottom: 16
+  },
+  divider: {
+    flexDirection: "row",
+    alignItems: "center",
+    width: "100%",
+    maxWidth: 320,
+    marginBottom: 16
+  },
+  dividerLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: "#ccc"
+  },
+  dividerText: {
+    marginHorizontal: 12,
+    color: "#666",
+    fontSize: 14
+  },
 });
