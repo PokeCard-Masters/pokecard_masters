@@ -40,7 +40,6 @@ class TokenOut(Schema):
 class ErrorOut(Schema):
     detail: str
 
-
 @api.get("/hello")
 def hello(request):
     return "Hello world"
@@ -104,13 +103,10 @@ def register(request, payload: RegisterIn):
 
     if len(password) < 6:
         return 400, {"detail": "Password must be at least 6 characters."}
-
-    # Check if user with this email already has a password set
     try:
         existing = User.objects.get(email=email)
         if existing.password:
             return 409, {"detail": "An account with this email already exists."}
-        # Google-only user: link account by setting password
         existing.password = make_password(password)
         existing.name = name
         existing.save()
