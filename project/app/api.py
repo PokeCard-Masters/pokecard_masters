@@ -40,6 +40,14 @@ class TokenOut(Schema):
 class ErrorOut(Schema):
     detail: str
 
+class PlayerCardSchema(Schema):
+    id: int
+    name: str
+    image: str
+    category: str
+    rarity: str
+    illustrator: str
+    quantity: int
 
 @api.get("/hello")
 def hello(request):
@@ -72,7 +80,7 @@ def get_me(request):
 
     return user
 
-@api.get("/player/card", auth=jwt_auth)
+@api.get("/player/card", auth=jwt_auth, response={200: List[PlayerCardSchema], 400: ErrorOut})
 def view_card(request):
     claims = request.auth_user
     user_id = claims["sub"]
@@ -104,13 +112,10 @@ def register(request, payload: RegisterIn):
 
     if len(password) < 6:
         return 400, {"detail": "Password must be at least 6 characters."}
-
-    # Check if user with this email already has a password set
     try:
         existing = User.objects.get(email=email)
         if existing.password:
             return 409, {"detail": "An account with this email already exists."}
-        # Google-only user: link account by setting password
         existing.password = make_password(password)
         existing.name = name
         existing.save()
