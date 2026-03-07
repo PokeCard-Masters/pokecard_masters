@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { View, Text, TextInput, Pressable, StyleSheet, ActivityIndicator, TouchableOpacity } from "react-native";
+import { View, Text, TextInput, Pressable, StyleSheet, ActivityIndicator } from "react-native";
 import { useRouter } from "expo-router";
 import { LinearGradient } from 'expo-linear-gradient';
 import { useAuth } from "@/context/AuthContext";
@@ -57,7 +57,7 @@ export default function LoginScreen() {
         <Text style={styles.subtitle}>De retour dans la région ?⚡️</Text>
         <TextInput
           style={styles.input}
-          placeholder="Email"
+          placeholder="Email.."
           autoCapitalize="none"
           keyboardType="email-address"
           value={email}
@@ -65,7 +65,7 @@ export default function LoginScreen() {
         />
         <TextInput
           style={styles.input}
-          placeholder="Password"
+          placeholder="Mot de passe.."
           secureTextEntry
           value={password}
           onChangeText={setPassword}
@@ -106,7 +106,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     padding: 20,
-    backgroundColor: '#654DC4'
+    backgroundColor: '#654DC4',
   },
   background: {
     position: 'absolute',
@@ -126,7 +126,6 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.2,
     shadowRadius: 6,
     elevation: 10,
-
   },
   title: {
     fontSize: 28,
