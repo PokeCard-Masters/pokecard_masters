@@ -40,6 +40,15 @@ class TokenOut(Schema):
 class ErrorOut(Schema):
     detail: str
 
+class PlayerCardSchema(Schema):
+    id: int
+    name: str
+    image: str
+    category: str
+    rarity: str
+    illustrator: str
+    quantity: int
+
 @api.get("/hello")
 def hello(request):
     return "Hello world"
@@ -71,7 +80,7 @@ def get_me(request):
 
     return user
 
-@api.get("/player/card", auth=jwt_auth)
+@api.get("/player/card", auth=jwt_auth, response={200: List[PlayerCardSchema], 400: ErrorOut})
 def view_card(request):
     claims = request.auth_user
     user_id = claims["sub"]

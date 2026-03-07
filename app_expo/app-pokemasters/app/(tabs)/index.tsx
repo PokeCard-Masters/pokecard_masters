@@ -54,7 +54,6 @@ const styles = StyleSheet.create({
     gap: 24,
   },
 
-  // Header
   header: {
     alignItems: 'center',
     gap: 6,
@@ -140,7 +139,6 @@ const styles = StyleSheet.create({
     letterSpacing: 1,
   },
 
-  // Logout
   logoutBtn: {
     marginTop: 8,
     paddingVertical: 10,
