@@ -9,6 +9,6 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Echo PR Opened
-        run: echo "Pull Request #${{ github.event.pull_request.number }} opened by ${{ github.event.pull_request.user.login }}"
+        run: echo "Pull Request"
       - name: Echo PR Changes
-        run: echo "Pull Request #${{ github.event.pull_request.number }} has changes: ${{ github.event.pull_request.changed_files }} files changed."
+        run: echo "Pull Request changes"
