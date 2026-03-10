@@ -1,0 +1,17 @@
+# Write a default echo test on pr open and changes
+
+name: PR Opened
+on:
+  pull_request:
+    types: [opened, synchronize]
+jobs:
+  echo:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Echo PR Opened
+        run: echo "Pull Request #${{ github.event.pull_request.number }} opened by ${{ github.event.pull_request.user.login }}"
+      - name: Echo PR Changes
+        run: echo "Pull Request #${{ github.event.pull_request.number }} has changes:
+        ${{ github.event.pull_request.changed_files }} files changed."
+
+
