@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import {
   ActivityIndicator,
   Animated,
-
+  Dimensions,
   Image,
   ScrollView,
   StatusBar,
@@ -23,6 +23,9 @@ interface Card {
   illustrator: string;
 }
 
+
+const { width } = Dimensions.get('window');
+const CARD_WIDTH = (width - 52) / 2;
 
 const RARITY_STYLES: Record<string, { color: string; bg: string; border: string }> = {
   'One Diamond':   { color: '#90a4ae', bg: '#90a4ae11', border: '#90a4ae44' },
@@ -296,7 +299,7 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   cardWrapper: {
-    width: 400,
+    width: CARD_WIDTH,
     marginBottom: 8,
   },
   card: {

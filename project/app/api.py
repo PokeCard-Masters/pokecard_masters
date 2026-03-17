@@ -185,39 +185,39 @@ def open_booster(request):
     claims = request.auth_user
     user_id = claims["sub"]
 
-    common_cards = list(Card.objects.filter(rarity__in=RARITY_TIERS["common"]))
-    uncommon_cards = list(Card.objects.filter(rarity__in=RARITY_TIERS["uncommon"]))
-    rare_cards = list(Card.objects.filter(rarity__in=RARITY_TIERS["rare"]))
-
-    pulled = []
-
-    # 6 common (fallback: uncommon → rare)
-    pool = common_cards or uncommon_cards or rare_cards
-    if pool:
-        pulled.extend(random.choices(pool, k=6))
-
-    # 2 uncommon (fallback: common → rare)
-    pool = uncommon_cards or common_cards or rare_cards
-    if pool:
-        pulled.extend(random.choices(pool, k=2))
-
-    # 2 rare weighted (fallback: uncommon → common)
-    if rare_cards:
-        weights = [RARE_WEIGHTS.get(c.rarity, 1) for c in rare_cards]
-        pulled.extend(random.choices(rare_cards, weights=weights, k=2))
-    else:
-        pool = uncommon_cards or common_cards
-        if pool:
-            pulled.extend(random.choices(pool, k=2))
-
-    if not pulled:
-        return 500, {"detail": "No cards available"}
-
     with transaction.atomic():
         user = User.objects.select_for_update().get(user_id=user_id)
 
         if user.last_booster_opened == date.today():
             return 403, {"detail": "Daily limit reached"}
+
+        common_cards = list(Card.objects.filter(rarity__in=RARITY_TIERS["common"]))
+        uncommon_cards = list(Card.objects.filter(rarity__in=RARITY_TIERS["uncommon"]))
+        rare_cards = list(Card.objects.filter(rarity__in=RARITY_TIERS["rare"]))
+
+        pulled = []
+
+        # 6 common (fallback: uncommon → rare)
+        pool = common_cards or uncommon_cards or rare_cards
+        if pool:
+            pulled.extend(random.choices(pool, k=6))
+
+        # 2 uncommon (fallback: common → rare)
+        pool = uncommon_cards or common_cards or rare_cards
+        if pool:
+            pulled.extend(random.choices(pool, k=2))
+
+        # 2 rare weighted (fallback: uncommon → common)
+        if rare_cards:
+            weights = [RARE_WEIGHTS.get(c.rarity, 1) for c in rare_cards]
+            pulled.extend(random.choices(rare_cards, weights=weights, k=2))
+        else:
+            pool = uncommon_cards or common_cards
+            if pool:
+                pulled.extend(random.choices(pool, k=2))
+
+        if not pulled:
+            return 500, {"detail": "No cards available"}
 
         # Save to collection
         for card in pulled:
