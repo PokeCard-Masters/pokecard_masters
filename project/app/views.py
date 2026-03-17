@@ -2,8 +2,6 @@ from django.shortcuts import render
 from django.http import JsonResponse
 import requests
 from .models import Card
-from django.contrib.auth.decorators import login_required
-
 
 def import_list(request):
     result = Card.objects.all()
@@ -55,14 +53,6 @@ def import_api(request):
             print(f"{i['name']} does not have image")
     return JsonResponse({"success": "ok"})
 
-
-@login_required
-def index(request):
-    pokemons = Card.objects.all()
-    ctx = {"pokemons": pokemons}
-    return render(request, "index.html", ctx)
-
-
 def card(request):
     r = requests.get("https://api.tcgdex.net/v2/en/cards/swsh3-40")
     r_json = f"{r.json().get('image')}/high.png"
@@ -72,7 +62,3 @@ def card(request):
     ctx = {"card": r_json, "name": name_json, "rarity": rarity_json}
 
     return render(request, "index.html", ctx)
-
-
-def landing(request):
-    return render(request, "index.html")

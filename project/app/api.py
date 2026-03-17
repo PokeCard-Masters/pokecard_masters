@@ -7,6 +7,7 @@ from django.db import transaction
 from django.db.models import F
 from .models import Card, User, PlayerCard
 from .authentification import GoogleJWTAuth, create_app_jwt
+from ninja.pagination import paginate, PageNumberPagination
 
 jwt_auth = GoogleJWTAuth()
 
@@ -238,3 +239,8 @@ def open_booster(request):
         }
         for c in pulled
     ]
+
+@api.get('user/pagination', response={200: list[CardsOut], 404: ErrorOut, 500: TokenOut})
+@paginate
+def pagination(request): 
+        return CardsOut.objects.all()
