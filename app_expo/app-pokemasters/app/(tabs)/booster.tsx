@@ -2,13 +2,13 @@ import React, { useState } from 'react';
 import {
   ActivityIndicator,
   Animated,
-  Dimensions,
   Image,
   ScrollView,
   StatusBar,
   StyleSheet,
   Text,
   TouchableOpacity,
+  useWindowDimensions,
   View,
 } from 'react-native';
 import { useAuth } from '@/context/AuthContext';
@@ -23,9 +23,6 @@ interface Card {
   illustrator: string;
 }
 
-
-const { width } = Dimensions.get('window');
-const CARD_WIDTH = (width - 52) / 2;
 
 const RARITY_STYLES: Record<string, { color: string; bg: string; border: string }> = {
   'One Diamond':   { color: '#90a4ae', bg: '#90a4ae11', border: '#90a4ae44' },
@@ -45,26 +42,25 @@ const getRarityStyle = (rarity: string) =>
 
 const PokemonBoosterOpener = () => {
   const { token } = useAuth();
+  const { width } = useWindowDimensions();
+  const CARD_WIDTH = (width - 52) / 2;
+  const CARD_IMAGE_HEIGHT = CARD_WIDTH * 1.4;
   const [pulledCards, setPulledCards] = useState<Card[]>([]);
   const [isOpening, setIsOpening] = useState(false);
   const [showCards, setShowCards] = useState(false);
-  const [dailyLimitReached, setDailyLimitReached] = useState(false);
   const [fadeAnim] = useState(new Animated.Value(0));
 
   const openBooster = async () => {
     if (!token) return;
     setIsOpening(true);
     setShowCards(false);
-    setDailyLimitReached(false);
     fadeAnim.setValue(0);
 
     try {
       const response = await apiFetch('/api/booster/open', token, { method: 'POST' });
 
-      if (response.status === 403) {
-        setDailyLimitReached(true);
-        setIsOpening(false);
-        return;
+      if (!response.ok) {
+        throw new Error(`Server error: ${response.status}`);
       }
 
       const data: Card[] = await response.json();
@@ -114,18 +110,8 @@ const PokemonBoosterOpener = () => {
           )}
         </View>
 
-        {/* Daily limit message */}
-        {dailyLimitReached && (
-          <View style={styles.emptyWrap}>
-            <Text style={styles.emptyIcon}>⏳</Text>
-            <Text style={styles.emptyText}>
-              {`Vous avez déjà ouvert un booster aujourd'hui, revenez demain !`}
-            </Text>
-          </View>
-        )}
-
         {/* Initial message */}
-        {!showCards && !isOpening && !dailyLimitReached && (
+        {!showCards && !isOpening && (
           <View style={styles.emptyWrap}>
             <Text style={styles.emptyIcon}>🎴</Text>
             <Text style={styles.emptyText}>
@@ -142,16 +128,16 @@ const PokemonBoosterOpener = () => {
               {pulledCards.map((card, index) => {
                 const rs = getRarityStyle(card.rarity ?? '');
                 return (
-                  <View key={index} style={styles.cardWrapper}>
+                  <View key={index} style={[styles.cardWrapper, { width: CARD_WIDTH }]}>
                     <View style={[styles.card, { borderColor: rs.border }]}>
                       {card.image ? (
                         <Image
                           source={{ uri: `${card.image}/high.png` }}
-                          style={styles.cardImage}
+                          style={[styles.cardImage, { height: CARD_IMAGE_HEIGHT }]}
                           resizeMode="contain"
                         />
                       ) : (
-                        <View style={[styles.cardImage, styles.noImage]}>
+                        <View style={[styles.cardImage, styles.noImage, { height: CARD_IMAGE_HEIGHT }]}>
                           <Text style={styles.noImageText}>—</Text>
                         </View>
                       )}
@@ -299,7 +285,6 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   cardWrapper: {
-    width: CARD_WIDTH,
     marginBottom: 8,
   },
   card: {
@@ -314,7 +299,6 @@ const styles = StyleSheet.create({
   },
   cardImage: {
     width: '100%',
-    height: 250 * 1.4,
     backgroundColor: '#1e1e30',
   },
   noImage: {

@@ -1,4 +1,3 @@
-from datetime import date, timedelta
 from django.test import TestCase, Client
 from app.models import Card, User, PlayerCard
 from app.authentification import create_app_jwt
@@ -60,21 +59,13 @@ class BoosterOpenTest(TestCase):
         total_qty = sum(pc.quantity for pc in PlayerCard.objects.filter(card_user=self.user))
         self.assertEqual(total_qty, 10)
 
-    def test_open_booster_daily_limit(self):
+    def test_open_booster_multiple_times(self):
+        """User can open multiple boosters without restriction."""
         self.client.post("/api/booster/open", **self._auth_header())
-        response = self.client.post("/api/booster/open", **self._auth_header())
-        self.assertEqual(response.status_code, 403)
-
-    def test_open_booster_resets_next_day(self):
-        self.user.last_booster_opened = date.today() - timedelta(days=1)
-        self.user.save()
         response = self.client.post("/api/booster/open", **self._auth_header())
         self.assertEqual(response.status_code, 200)
-
-    def test_open_booster_updates_last_booster_opened(self):
-        self.client.post("/api/booster/open", **self._auth_header())
-        self.user.refresh_from_db()
-        self.assertEqual(self.user.last_booster_opened, date.today())
+        total_qty = sum(pc.quantity for pc in PlayerCard.objects.filter(card_user=self.user))
+        self.assertEqual(total_qty, 20)
 
     def test_open_booster_no_cards_returns_500(self):
         Card.objects.all().delete()

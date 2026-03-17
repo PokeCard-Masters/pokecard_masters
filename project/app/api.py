@@ -1,6 +1,5 @@
 import uuid
 import random
-from datetime import date
 from ninja import NinjaAPI, Schema
 from typing import List
 from django.contrib.auth.hashers import make_password, check_password
@@ -180,16 +179,16 @@ RARE_WEIGHTS = {
 }
 
 
-@api.post("/booster/open", auth=jwt_auth, response={200: list[BoosterCardOut], 403: ErrorOut, 500: ErrorOut})
+@api.post("/booster/open", auth=jwt_auth, response={200: list[BoosterCardOut], 404: ErrorOut, 500: ErrorOut})
 def open_booster(request):
     claims = request.auth_user
     user_id = claims["sub"]
 
     with transaction.atomic():
-        user = User.objects.select_for_update().get(user_id=user_id)
-
-        if user.last_booster_opened == date.today():
-            return 403, {"detail": "Daily limit reached"}
+        try:
+            user = User.objects.select_for_update().get(user_id=user_id)
+        except User.DoesNotExist:
+            return 404, {"detail": "User not found"}
 
         common_cards = list(Card.objects.filter(rarity__in=RARITY_TIERS["common"]))
         uncommon_cards = list(Card.objects.filter(rarity__in=RARITY_TIERS["uncommon"]))
@@ -227,9 +226,6 @@ def open_booster(request):
             if not created:
                 pc.quantity = F("quantity") + 1
                 pc.save(update_fields=["quantity"])
-
-        user.last_booster_opened = date.today()
-        user.save(update_fields=["last_booster_opened"])
 
     return 200, [
         {

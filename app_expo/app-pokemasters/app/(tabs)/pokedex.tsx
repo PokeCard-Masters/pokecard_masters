@@ -1,4 +1,4 @@
-import { StyleSheet, View, Text, FlatList, Image, ScrollView, TouchableOpacity, StatusBar, Platform } from 'react-native';
+import { StyleSheet, View, Text, FlatList, Image, StatusBar, Platform } from 'react-native';
 import { useEffect, useState } from 'react';
 import * as SecureStore from 'expo-secure-store';
 import { API_BASE_URL } from '@/config/auth';
@@ -23,11 +23,8 @@ const RARITY_STYLES: Record<RarityKey, { color: string; bg: string; border: stri
   'Secret':     { color: '#9c6bff', bg: '#9c6bff11', border: '#9c6bff44' },
 };
 
-const FILTERS = ['Toutes', 'Common', 'Uncommon', 'Rare', 'Ultra Rare', 'Secret'];
-
 export default function Pokedex() {
   const [pokemons, setPokemons] = useState<Pokemon[]>([]);
-  const [activeFilter, setActiveFilter] = useState('Toutes');
 
   const getData = async () => {
     const token = Platform.OS === 'web'
@@ -41,10 +38,6 @@ export default function Pokedex() {
   };
 
   useEffect(() => { getData(); }, []);
-
-  const filtered = activeFilter === 'Toutes'
-    ? pokemons
-    : pokemons.filter(p => p.rarity === activeFilter);
 
   const getRarityStyle = (rarity: string | null) =>
     RARITY_STYLES[(rarity as RarityKey)] ?? RARITY_STYLES['Common'];
@@ -90,29 +83,9 @@ export default function Pokedex() {
       {/* Divider */}
       <View style={styles.divider} />
 
-      {/* Filter chips */}
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        style={styles.filterScroll}
-        contentContainerStyle={styles.filterContent}
-      >
-        {FILTERS.map(f => (
-          <TouchableOpacity
-            key={f}
-            style={[styles.filterChip, activeFilter === f && styles.filterChipActive]}
-            onPress={() => setActiveFilter(f)}
-          >
-            <Text style={[styles.filterText, activeFilter === f && styles.filterTextActive]}>
-              {f.toUpperCase()}
-            </Text>
-          </TouchableOpacity>
-        ))}
-      </ScrollView>
-
       {/* Card Grid */}
       <FlatList
-        data={filtered}
+        data={pokemons}
         keyExtractor={(item) => item.id.toString()}
         numColumns={2}
         columnWrapperStyle={styles.row}
@@ -251,37 +224,6 @@ const styles = StyleSheet.create({
     marginHorizontal: 24,
     backgroundColor: '#a8842a55',
     marginBottom: 16,
-  },
-
-  // Filters
-  filterScroll: {
-    flexGrow: 0,
-    marginBottom: 16,
-  },
-  filterContent: {
-    paddingHorizontal: 20,
-    gap: 8,
-  },
-  filterChip: {
-    paddingHorizontal: 14,
-    paddingVertical: 6,
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: 'rgba(240,192,64,0.15)',
-    backgroundColor: '#13131f',
-  },
-  filterChipActive: {
-    borderColor: '#a8842a',
-    backgroundColor: 'rgba(240,192,64,0.08)',
-  },
-  filterText: {
-    fontSize: 9,
-    fontWeight: '700',
-    color: '#6b6b88',
-    letterSpacing: 1.5,
-  },
-  filterTextActive: {
-    color: '#f0c040',
   },
 
   // Grid
