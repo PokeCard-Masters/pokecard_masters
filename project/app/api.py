@@ -2,7 +2,7 @@ import uuid
 from ninja import NinjaAPI, Schema
 from typing import List
 from django.contrib.auth.hashers import make_password, check_password
-from .models import Card, User
+from .models import Card, User, PlayerCard
 from .authentification import GoogleJWTAuth, create_app_jwt
 
 jwt_auth = GoogleJWTAuth()
@@ -40,6 +40,14 @@ class TokenOut(Schema):
 class ErrorOut(Schema):
     detail: str
 
+class PlayerCardSchema(Schema):
+    id: int
+    name: str
+    image: str
+    category: str
+    rarity: str
+    illustrator: str
+    quantity: int
 
 @api.get("/hello")
 def hello(request):
@@ -72,6 +80,25 @@ def get_me(request):
 
     return user
 
+@api.get("/player/card", auth=jwt_auth, response={200: List[PlayerCardSchema], 400: ErrorOut})
+def view_card(request):
+    claims = request.auth_user
+    user_id = claims["sub"]
+    queryset = PlayerCard.objects.select_related('card').filter(card_user__user_id=user_id)
+    data = [
+        {
+            "id": pc.id,
+            "name": pc.card.name,
+            "image": pc.card.image,
+            "category": pc.card.category,
+            "rarity": pc.card.rarity,
+            "illustrator": pc.card.illustrator,
+            "quantity": pc.quantity,
+        }
+        for pc in queryset
+    ]
+    return data
+
 
 @api.post("/auth/register", response={201: TokenOut, 409: ErrorOut, 400: ErrorOut})
 def register(request, payload: RegisterIn):
@@ -85,13 +112,10 @@ def register(request, payload: RegisterIn):
 
     if len(password) < 6:
         return 400, {"detail": "Password must be at least 6 characters."}
-
-    # Check if user with this email already has a password set
     try:
         existing = User.objects.get(email=email)
         if existing.password:
             return 409, {"detail": "An account with this email already exists."}
-        # Google-only user: link account by setting password
         existing.password = make_password(password)
         existing.name = name
         existing.save()

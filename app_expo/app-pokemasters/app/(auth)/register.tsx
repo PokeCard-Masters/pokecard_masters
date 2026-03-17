@@ -30,9 +30,8 @@ export default function RegisterScreen() {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Create Account</Text>
-      <Text style={styles.subtitle}>Join PokeMasters</Text>
-
+      <Text style={styles.title}>Créer un compte :</Text>
+      <Text style={styles.subtitle}>Viens jouer à PokeMasters!</Text>
       <TextInput
         style={styles.input}
         placeholder="Name"
