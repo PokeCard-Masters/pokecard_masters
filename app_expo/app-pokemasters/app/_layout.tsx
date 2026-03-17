@@ -30,8 +30,8 @@ function RootNavigator() {
         options={{ headerShown: false }}
       />
       <Stack.Screen
-        name="(tabs)"
-        options={{
+          name="(tabs)"
+          options={{
           headerShown: false,
         }}
       />

@@ -75,7 +75,7 @@ export default function Pokedex() {
             <Text style={styles.statLabel}>CARTES</Text>
           </View>
           <View style={styles.statDivider} />
-          <View style={styles.stat}>
+          <View style={styles.stat}>  
             <Text style={styles.statValue}>{stats.rares}</Text>
             <Text style={styles.statLabel}>RARES</Text>
           </View>

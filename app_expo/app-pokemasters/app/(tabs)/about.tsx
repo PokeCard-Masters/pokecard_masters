@@ -518,7 +518,7 @@ const styles = StyleSheet.create({
   },
 });
 
-aconst styles = StyleSheet.create({ 
+const style = StyleSheet.create({ 
     container: {
         flex: 1,
         backgroundColor: '#F8F8FF',
