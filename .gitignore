@@ -14,5 +14,10 @@ app_expo/app-pokemasters/.env
 # Zitadel keys
 project/app/zitadel_service_key.json
 
+# Expo machine-specific settings
+.expo/
+app_expo/.expo/
+app_expo/app-pokemasters/.expo/
+
 # Claude
 CLAUDE.md
