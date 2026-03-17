@@ -1,5 +1,7 @@
-import { StyleSheet, View, Text, FlatList, Image, ScrollView, TouchableOpacity, StatusBar } from 'react-native';
+import { StyleSheet, View, Text, FlatList, Image, ScrollView, TouchableOpacity, StatusBar, Platform } from 'react-native';
 import { useEffect, useState } from 'react';
+import * as SecureStore from 'expo-secure-store';
+import { API_BASE_URL } from '@/config/auth';
 
 type Pokemon = {
   id: number;
@@ -28,8 +30,10 @@ export default function Pokedex() {
   const [activeFilter, setActiveFilter] = useState('Toutes');
 
   const getData = async () => {
-    const token = await localStorage.getItem('auth_token');
-    const response = await fetch('http://localhost:8000/api/player/card', {
+    const token = Platform.OS === 'web'
+      ? localStorage.getItem('auth_token')
+      : await SecureStore.getItemAsync('auth_token');
+    const response = await fetch(`${API_BASE_URL}/api/player/card`, {
       headers: { 'Authorization': `Bearer ${token}` },
     });
     const data = await response.json();

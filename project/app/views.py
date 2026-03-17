@@ -1,29 +1,8 @@
 from django.shortcuts import render
 from django.http import JsonResponse
 import requests
-from .models import Card, PlayerCard
+from .models import Card
 from django.contrib.auth.decorators import login_required
-from rest_framework.decorators import api_view
-from rest_framework.response import Response
-
-
-@api_view(["GET"])
-def view_card(request):
-    if request.user.is_authenticated:
-        queryset = PlayerCard.objects.filter(card_user=request.user)
-    data = [
-        {
-            "id": pc.id,
-            "name": pc.card.name,
-            "image": pc.card.image,
-            "category": pc.card.category,
-            "rarity": pc.card.rarity,
-            "illustrator": pc.card.illustrator,
-            "quantity": pc.quantity,
-        }
-        for pc in queryset
-    ]
-    return Response(data)
 
 
 def import_list(request):

@@ -10,5 +10,4 @@ urlpatterns = [
     path("import/", views.import_api, name="import_api"),
     path("app/", views.index, name="index"),
     path("api/", api.urls),
-    path('player/card/', views.view_card, name='player_card'),
 ]
