@@ -23,7 +23,7 @@ export default function Index() {
 
       {/* Menu */}
       <View style={styles.menu}>
-        <Link href="/about" asChild>
+        <Link href="/booster" asChild>
           <Pressable style={styles.primaryBtn}>
             <Text style={styles.primaryBtnText}>✦  Ouvrir un Booster</Text>
           </Pressable>

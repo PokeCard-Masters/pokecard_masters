@@ -34,7 +34,7 @@ export default function TabsLayout() {
                     }}
                 />
                 <Tabs.Screen
-                    name='about'
+                    name='booster'
                     options={{
                         headerTitle: 'Jouer',
                         tabBarIcon: ({ focused, color }) => (

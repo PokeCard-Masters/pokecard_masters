@@ -517,15 +517,3 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
 });
-
-aconst styles = StyleSheet.create({ 
-    container: {
-        flex: 1,
-        backgroundColor: '#F8F8FF',
-        justifyContent: 'center',
-        alignItems: 'center',
-    },
-    text: {
-        color: '#202020',
-    },
-})
