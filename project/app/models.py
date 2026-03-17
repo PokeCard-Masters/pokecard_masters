@@ -15,6 +15,7 @@ class User(models.Model):
     name = models.CharField(max_length=200)
     password = models.CharField(max_length=128, blank=True, default="")
     email = models.EmailField(max_length=200, unique=True)
+    last_booster_opened = models.DateField(null=True, blank=True)
 
 class Rarity_Card(models.Model):
     order_rarity = [
