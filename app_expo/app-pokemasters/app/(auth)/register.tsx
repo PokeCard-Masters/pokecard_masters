@@ -63,13 +63,15 @@ export default function RegisterScreen() {
         <Text style={styles.subtitle}>Inscrit toi et rejoins l'aventure!⚡️</Text>
         <TextInput
           style={styles.input}
-          placeholder="Nom :"
+          placeholder="Nom"
+          placeholderTextColor="#999"
           value={name}
           onChangeText={setName}
         />
         <TextInput
           style={styles.input}
-          placeholder="Email :"
+          placeholder="Email"
+          placeholderTextColor="#999"
           autoCapitalize="none"
           keyboardType="email-address"
           value={email}
@@ -77,7 +79,8 @@ export default function RegisterScreen() {
         />
         <TextInput
           style={styles.input}
-          placeholder="Mot de passe :"
+          placeholder="Mot de passe"
+          placeholderTextColor="#999"
           secureTextEntry
           value={password}
           onChangeText={setPassword}

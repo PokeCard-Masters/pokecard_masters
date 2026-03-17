@@ -57,7 +57,8 @@ export default function LoginScreen() {
         <Text style={styles.subtitle}>De retour dans la région ?⚡️</Text>
         <TextInput
           style={styles.input}
-          placeholder="Email.."
+          placeholder="Email"
+          placeholderTextColor="#999"
           autoCapitalize="none"
           keyboardType="email-address"
           value={email}
@@ -65,7 +66,8 @@ export default function LoginScreen() {
         />
         <TextInput
           style={styles.input}
-          placeholder="Mot de passe.."
+          placeholder="Mot de passe"
+          placeholderTextColor="#999"
           secureTextEntry
           value={password}
           onChangeText={setPassword}
