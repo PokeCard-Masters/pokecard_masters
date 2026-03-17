@@ -1,7 +1,11 @@
 import uuid
+import random
+from datetime import date
 from ninja import NinjaAPI, Schema
 from typing import List
 from django.contrib.auth.hashers import make_password, check_password
+from django.db import transaction
+from django.db.models import F
 from .models import Card, User, PlayerCard
 from .authentification import GoogleJWTAuth, create_app_jwt
 
@@ -48,6 +52,15 @@ class PlayerCardSchema(Schema):
     rarity: str
     illustrator: str
     quantity: int
+
+
+class BoosterCardOut(Schema):
+    name: str
+    card_id: str
+    image: str
+    category: str
+    rarity: str
+    illustrator: str
 
 @api.get("/hello")
 def hello(request):
@@ -149,3 +162,83 @@ def login(request, payload: LoginIn):
 
     token = create_app_jwt(user)
     return 200, {"token": token, "user": user}
+
+
+RARITY_TIERS = {
+    "common": ["One Diamond", "Two Diamond"],
+    "uncommon": ["Three Diamond", "Four Diamond"],
+    "rare": ["One Shiny", "One Star", "Two Star", "Three Star", "Two Shiny", "Crown"],
+}
+
+RARE_WEIGHTS = {
+    "One Shiny": 5,
+    "One Star": 4,
+    "Two Star": 2.5,
+    "Three Star": 1.5,
+    "Two Shiny": 0.8,
+    "Crown": 0.3,
+}
+
+
+@api.post("/booster/open", auth=jwt_auth, response={200: list[BoosterCardOut], 403: ErrorOut, 500: ErrorOut})
+def open_booster(request):
+    claims = request.auth_user
+    user_id = claims["sub"]
+
+    with transaction.atomic():
+        user = User.objects.select_for_update().get(user_id=user_id)
+
+        if user.last_booster_opened == date.today():
+            return 403, {"detail": "Daily limit reached"}
+
+        common_cards = list(Card.objects.filter(rarity__in=RARITY_TIERS["common"]))
+        uncommon_cards = list(Card.objects.filter(rarity__in=RARITY_TIERS["uncommon"]))
+        rare_cards = list(Card.objects.filter(rarity__in=RARITY_TIERS["rare"]))
+
+        pulled = []
+
+        # 6 common (fallback: uncommon → rare)
+        pool = common_cards or uncommon_cards or rare_cards
+        if pool:
+            pulled.extend(random.choices(pool, k=6))
+
+        # 2 uncommon (fallback: common → rare)
+        pool = uncommon_cards or common_cards or rare_cards
+        if pool:
+            pulled.extend(random.choices(pool, k=2))
+
+        # 2 rare weighted (fallback: uncommon → common)
+        if rare_cards:
+            weights = [RARE_WEIGHTS.get(c.rarity, 1) for c in rare_cards]
+            pulled.extend(random.choices(rare_cards, weights=weights, k=2))
+        else:
+            pool = uncommon_cards or common_cards
+            if pool:
+                pulled.extend(random.choices(pool, k=2))
+
+        if not pulled:
+            return 500, {"detail": "No cards available"}
+
+        # Save to collection
+        for card in pulled:
+            pc, created = PlayerCard.objects.get_or_create(
+                card_user=user, card=card, defaults={"quantity": 1}
+            )
+            if not created:
+                pc.quantity = F("quantity") + 1
+                pc.save(update_fields=["quantity"])
+
+        user.last_booster_opened = date.today()
+        user.save(update_fields=["last_booster_opened"])
+
+    return 200, [
+        {
+            "name": c.name,
+            "card_id": c.card_id,
+            "image": c.image,
+            "category": c.category or "",
+            "rarity": c.rarity or "",
+            "illustrator": c.illustrator or "",
+        }
+        for c in pulled
+    ]

@@ -9,7 +9,6 @@ dependencies = [
     "django-cors-headers>=4.9.0",
     "django-ninja>=1.5.0",
     "dotenv>=0.9.9",
-    "jwt>=1.4.0",
     "google-auth>=2.0.0",
     "mysqlclient",
     "pyjwt>=2.10.1",
