@@ -1,8 +1,8 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import {
   ActivityIndicator,
   Animated,
-  Dimensions,
+
   Image,
   ScrollView,
   StatusBar,
@@ -11,165 +11,70 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import { useAuth } from '@/context/AuthContext';
+import { apiFetch } from '@/services/api';
 
 interface Card {
-  id: string;
-  localId: string;
   name: string;
-  image?: string;
+  card_id: string;
+  image: string;
+  category: string;
   rarity: string;
-  types?: string[];
-  hp?: number;
-  images?: {
-    small?: string;
-    large?: string;
-  };
+  illustrator: string;
 }
 
-interface SetData {
-  id: string;
-  name: string;
-  logo: string;
-  cardCount: { total: number };
-}
 
-const { width } = Dimensions.get('window');
-const CARD_WIDTH = (width - 40) / 5;
-
-// ─── Rarity config ────────────────────────────────────────────────────────────
-type RarityKey =
-  | 'One Diamond' | 'Two Diamond' | 'Three Diamond' | 'Four Diamond'
-  | 'One Shiny' | 'One Star' | 'Two Star' | 'Three Star'
-  | 'Two Shiny' | 'Crown';
-
-const RARITY_STYLES: Record<string, { color: string; bg: string; border: string; weight: number }> = {
-  'One Diamond':   { color: '#90a4ae', bg: '#90a4ae11', border: '#90a4ae44', weight: 60 },
-  'Two Diamond':   { color: '#78909c', bg: '#78909c11', border: '#78909c44', weight: 30 },
-  'Three Diamond': { color: '#66bb6a', bg: '#66bb6a11', border: '#66bb6a44', weight: 15 },
-  'Four Diamond':  { color: '#26a69a', bg: '#26a69a11', border: '#26a69a44', weight: 8  },
-  'One Shiny':     { color: '#4fc3f7', bg: '#4fc3f711', border: '#4fc3f744', weight: 5  },
-  'One Star':      { color: '#29b6f6', bg: '#29b6f611', border: '#29b6f644', weight: 4  },
-  'Two Star':      { color: '#9c6bff', bg: '#9c6bff11', border: '#9c6bff44', weight: 2.5},
-  'Three Star':    { color: '#7c4dff', bg: '#7c4dff11', border: '#7c4dff44', weight: 1.5},
-  'Two Shiny':     { color: '#f0c040', bg: '#f0c04011', border: '#f0c04044', weight: 0.8},
-  'Crown':         { color: '#ef5350', bg: '#ef535011', border: '#ef535044', weight: 0.3},
+const RARITY_STYLES: Record<string, { color: string; bg: string; border: string }> = {
+  'One Diamond':   { color: '#90a4ae', bg: '#90a4ae11', border: '#90a4ae44' },
+  'Two Diamond':   { color: '#78909c', bg: '#78909c11', border: '#78909c44' },
+  'Three Diamond': { color: '#66bb6a', bg: '#66bb6a11', border: '#66bb6a44' },
+  'Four Diamond':  { color: '#26a69a', bg: '#26a69a11', border: '#26a69a44' },
+  'One Shiny':     { color: '#4fc3f7', bg: '#4fc3f711', border: '#4fc3f744' },
+  'One Star':      { color: '#29b6f6', bg: '#29b6f611', border: '#29b6f644' },
+  'Two Star':      { color: '#9c6bff', bg: '#9c6bff11', border: '#9c6bff44' },
+  'Three Star':    { color: '#7c4dff', bg: '#7c4dff11', border: '#7c4dff44' },
+  'Two Shiny':     { color: '#f0c040', bg: '#f0c04011', border: '#f0c04044' },
+  'Crown':         { color: '#ef5350', bg: '#ef535011', border: '#ef535044' },
 };
 
 const getRarityStyle = (rarity: string) =>
-  RARITY_STYLES[rarity] ?? { color: '#6b6b88', bg: '#6b6b8811', border: '#6b6b8844', weight: 5 };
+  RARITY_STYLES[rarity] ?? { color: '#6b6b88', bg: '#6b6b8811', border: '#6b6b8844' };
 
-// ─── Component ────────────────────────────────────────────────────────────────
 const PokemonBoosterOpener = () => {
-  const [setData, setSetData]       = useState<SetData | null>(null);
-  const [allCards, setAllCards]     = useState<Card[]>([]);
+  const { token } = useAuth();
   const [pulledCards, setPulledCards] = useState<Card[]>([]);
-  const [isOpening, setIsOpening]   = useState(false);
-  const [showCards, setShowCards]   = useState(false);
-  const [loading, setLoading]       = useState(true);
-  const [fadeAnim]                  = useState(new Animated.Value(0));
+  const [isOpening, setIsOpening] = useState(false);
+  const [showCards, setShowCards] = useState(false);
+  const [dailyLimitReached, setDailyLimitReached] = useState(false);
+  const [fadeAnim] = useState(new Animated.Value(0));
 
-  useEffect(() => { fetchSetData(); }, []);
+  const openBooster = async () => {
+    if (!token) return;
+    setIsOpening(true);
+    setShowCards(false);
+    setDailyLimitReached(false);
+    fadeAnim.setValue(0);
 
-  useEffect(() => {
-    if (showCards) {
-      Animated.timing(fadeAnim, { toValue: 1, duration: 600, useNativeDriver: true }).start();
-    }
-  }, [showCards]);
-
-  const fetchSetData = async () => {
     try {
-      const setResponse = await fetch('https://api.tcgdex.net/v2/en/sets/A4');
-      const setDataJson = await setResponse.json();
+      const response = await apiFetch('/api/booster/open', token, { method: 'POST' });
 
-      if (setDataJson.cards && Array.isArray(setDataJson.cards)) {
-        setSetData(setDataJson);
-        setAllCards(setDataJson.cards);
-        setLoading(false);
+      if (response.status === 403) {
+        setDailyLimitReached(true);
+        setIsOpening(false);
         return;
       }
 
-      const totalCards = setDataJson.cardCount?.total || 226;
-      const cardPromises = Array.from({ length: totalCards }, (_, i) => {
-        const cardId = `A4-${String(i + 1).padStart(3, '0')}`;
-        return fetch(`https://api.tcgdex.net/v2/fr/cards/${cardId}`)
-          .then(res => res.ok ? res.json() : null)
-          .catch(() => null);
-      });
-
-      const results = (await Promise.all(cardPromises)).filter(Boolean);
-      setSetData(setDataJson);
-      setAllCards(results);
-      setLoading(false);
+      const data: Card[] = await response.json();
+      setPulledCards(data);
+      setIsOpening(false);
+      setShowCards(true);
+      Animated.timing(fadeAnim, { toValue: 1, duration: 600, useNativeDriver: true }).start();
     } catch (error) {
-      console.error('Erreur chargement:', error);
-      setLoading(false);
+      console.error('Error opening booster:', error);
+      setIsOpening(false);
     }
   };
 
-  const openBooster = () => {
-    if (allCards.length === 0) return;
-    setIsOpening(true);
-    setShowCards(false);
-    fadeAnim.setValue(0);
-
-    setTimeout(() => {
-      const cards: Card[] = [];
-      const commonRarities   = ['One Diamond', 'Two Diamond'];
-      const uncommonRarities = ['Three Diamond', 'Four Diamond'];
-      const rareRarities     = ['One Shiny', 'One Star', 'Two Star', 'Three Star', 'Two Shiny', 'Crown'];
-
-      const pick = (pool: Card[], count: number) => {
-        const copy = [...pool];
-        for (let i = 0; i < count && copy.length > 0; i++) {
-          const idx = Math.floor(Math.random() * copy.length);
-          cards.push(copy[idx]);
-          copy.splice(idx, 1);
-        }
-      };
-
-      pick(allCards.filter(c => commonRarities.includes(c.rarity)), 6);
-      pick(allCards.filter(c => uncommonRarities.includes(c.rarity) && !cards.find(e => e.id === c.id)), 2);
-
-      // Sélection pondérée pour les rares
-      const rarePool = allCards.filter(c => rareRarities.includes(c.rarity) && !cards.find(e => e.id === c.id));
-      for (let i = 0; i < 2 && rarePool.length > 0; i++) {
-        const total = rarePool.reduce((s, c) => s + getRarityStyle(c.rarity).weight, 0);
-        let rand = Math.random() * total;
-        for (const card of rarePool) {
-          rand -= getRarityStyle(card.rarity).weight;
-          if (rand <= 0) { cards.push(card); rarePool.splice(rarePool.indexOf(card), 1); break; }
-        }
-      }
-
-      while (cards.length < 10) {
-        const remaining = allCards.filter(c => !cards.find(e => e.id === c.id));
-        if (!remaining.length) break;
-        cards.push(remaining[Math.floor(Math.random() * remaining.length)]);
-      }
-
-      setPulledCards(cards);
-      setIsOpening(false);
-      setShowCards(true);
-    }, 1500);
-  };
-
-  // ── Loading screen ──────────────────────────────────────────────────────────
-  if (loading) {
-    return (
-      <View style={styles.container}>
-        <StatusBar barStyle="light-content" />
-        <View style={styles.loadingWrap}>
-          <View style={styles.pokeball}>
-            <View style={styles.pokeballCenter} />
-          </View>
-          <ActivityIndicator size="large" color="#f0c040" style={{ marginTop: 24 }} />
-          <Text style={styles.loadingText}>Chargement du set…</Text>
-        </View>
-      </View>
-    );
-  }
-
-  // ── Main screen ─────────────────────────────────────────────────────────────
   return (
     <View style={styles.container}>
       <StatusBar barStyle="light-content" />
@@ -177,44 +82,19 @@ const PokemonBoosterOpener = () => {
 
         {/* Header */}
         <View style={styles.header}>
-          {setData?.logo && (
-            <Image
-              source={{ uri: `${setData.logo}/high.png` }}
-              style={styles.logo}
-              resizeMode="contain"
-            />
-          )}
           <View style={styles.headerRow}>
             <View style={styles.pokeball}>
               <View style={styles.pokeballCenter} />
             </View>
-            <Text style={styles.title}>{setData?.name || 'Pokémon TCG'}</Text>
+            <Text style={styles.title}>Pokémon TCG</Text>
           </View>
           <Text style={styles.subtitle}>BOOSTER OPENER · VAULT DU DRESSEUR</Text>
-          <View style={styles.statsBar}>
-            <View style={styles.stat}>
-              <Text style={styles.statValue}>{setData?.cardCount.total ?? '—'}</Text>
-              <Text style={styles.statLabel}>CARTES</Text>
-            </View>
-            <View style={styles.statDivider} />
-            <View style={styles.stat}>
-              <Text style={styles.statValue}>{pulledCards.length}</Text>
-              <Text style={styles.statLabel}>TIRÉES</Text>
-            </View>
-            <View style={styles.statDivider} />
-            <View style={styles.stat}>
-              <Text style={styles.statValue}>
-                {pulledCards.filter(c => ['One Star','Two Star','Three Star','Two Shiny','Crown'].includes(c.rarity)).length}
-              </Text>
-              <Text style={styles.statLabel}>RARES</Text>
-            </View>
-          </View>
         </View>
 
         {/* Divider */}
         <View style={styles.divider} />
 
-        {/* Bouton */}
+        {/* Button */}
         <View style={styles.btnWrap}>
           <TouchableOpacity
             onPress={openBooster}
@@ -231,8 +111,18 @@ const PokemonBoosterOpener = () => {
           )}
         </View>
 
-        {/* Message initial */}
-        {!showCards && !isOpening && (
+        {/* Daily limit message */}
+        {dailyLimitReached && (
+          <View style={styles.emptyWrap}>
+            <Text style={styles.emptyIcon}>⏳</Text>
+            <Text style={styles.emptyText}>
+              {`Vous avez déjà ouvert un booster aujourd'hui, revenez demain !`}
+            </Text>
+          </View>
+        )}
+
+        {/* Initial message */}
+        {!showCards && !isOpening && !dailyLimitReached && (
           <View style={styles.emptyWrap}>
             <Text style={styles.emptyIcon}>🎴</Text>
             <Text style={styles.emptyText}>
@@ -241,7 +131,7 @@ const PokemonBoosterOpener = () => {
           </View>
         )}
 
-        {/* Cartes tirées */}
+        {/* Pulled cards */}
         {showCards && pulledCards.length > 0 && (
           <Animated.View style={[styles.cardsSection, { opacity: fadeAnim }]}>
             <Text style={styles.cardsTitle}>✨ Vos cartes !</Text>
@@ -265,11 +155,11 @@ const PokemonBoosterOpener = () => {
                       <View style={styles.cardInfo}>
                         <Text style={styles.cardName} numberOfLines={1}>{card.name}</Text>
                         <View style={[styles.rarityBadge, { backgroundColor: rs.bg, borderColor: rs.border }]}>
-                          <Text style={[styles.rarityText, { color: rs.color as string  }]}>
+                          <Text style={[styles.rarityText, { color: rs.color }]}>
                             {(card.rarity ?? 'Unknown').toUpperCase()}
                           </Text>
                         </View>
-                        <Text style={styles.cardId}>{card.localId}</Text>
+                        <Text style={styles.cardId}>{card.card_id}</Text>
                       </View>
                     </View>
                   </View>
@@ -283,7 +173,6 @@ const PokemonBoosterOpener = () => {
   );
 };
 
-// ─── Styles ───────────────────────────────────────────────────────────────────
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -294,22 +183,6 @@ const styles = StyleSheet.create({
     paddingTop: 56,
     paddingBottom: 60,
   },
-
-  // Loading
-  loadingWrap: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  loadingText: {
-    color: '#6b6b88',
-    fontSize: 14,
-    marginTop: 12,
-    letterSpacing: 2,
-    textTransform: 'uppercase',
-  },
-
-  // Header
   header: {
     alignItems: 'center',
     gap: 6,
@@ -342,11 +215,6 @@ const styles = StyleSheet.create({
     borderWidth: 1.5,
     borderColor: '#222',
   },
-  logo: {
-    width: 200,
-    height: 70,
-    marginBottom: 8,
-  },
   title: {
     fontFamily: 'serif',
     fontSize: 24,
@@ -360,40 +228,11 @@ const styles = StyleSheet.create({
     letterSpacing: 3,
     marginTop: 2,
   },
-  statsBar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 20,
-    marginTop: 12,
-  },
-  stat: {
-    alignItems: 'center',
-    gap: 2,
-  },
-  statValue: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: '#f0c040',
-  },
-  statLabel: {
-    fontSize: 9,
-    color: '#6b6b88',
-    letterSpacing: 2,
-  },
-  statDivider: {
-    width: 1,
-    height: 28,
-    backgroundColor: '#f0c04022',
-  },
-
-  // Divider
   divider: {
     height: 1,
     backgroundColor: '#a8842a55',
     marginBottom: 28,
   },
-
-  // Button
   btnWrap: {
     alignItems: 'center',
     marginBottom: 32,
@@ -420,8 +259,6 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     letterSpacing: 1,
   },
-
-  // Empty state
   emptyWrap: {
     alignItems: 'center',
     marginTop: 20,
@@ -437,8 +274,6 @@ const styles = StyleSheet.create({
     lineHeight: 22,
     letterSpacing: 0.3,
   },
-
-  // Cards section
   cardsSection: {
     backgroundColor: '#13131f',
     borderRadius: 16,
@@ -460,8 +295,6 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     gap: 6,
   },
-
-  // Card
   cardWrapper: {
     width: 400,
     marginBottom: 8,
@@ -517,3 +350,5 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
 });
+
+export default PokemonBoosterOpener;
