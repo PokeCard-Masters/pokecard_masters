@@ -518,4 +518,14 @@ const styles = StyleSheet.create({
   },
 });
 
-export default PokemonBoosterOpener;
+aconst styles = StyleSheet.create({ 
+    container: {
+        flex: 1,
+        backgroundColor: '#F8F8FF',
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    text: {
+        color: '#202020',
+    },
+})
