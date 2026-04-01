@@ -279,7 +279,7 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
   },
   cardsGrid: {
-    flexDirection: 'row',
+    flexDirection: 'column',
     flexWrap: 'wrap',
     justifyContent: 'space-between',
     gap: 6,
@@ -298,7 +298,7 @@ const styles = StyleSheet.create({
     elevation: 4,
   },
   cardImage: {
-    width: '100%',
+    width: '50%',
     backgroundColor: '#1e1e30',
   },
   noImage: {

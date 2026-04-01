@@ -2,6 +2,7 @@ import { StyleSheet, View, Text, FlatList, Image, StatusBar, Platform } from 're
 import { useEffect, useState } from 'react';
 import * as SecureStore from 'expo-secure-store';
 import { API_BASE_URL } from '@/config/auth';
+import DropDown from '@/components/DropDown';
 
 type Pokemon = {
   id: number;
@@ -15,7 +16,7 @@ type Pokemon = {
 
 type RarityKey = 'Common' | 'Uncommon' | 'Rare' | 'Ultra Rare' | 'Secret';
 
-const RARITY_STYLES: Record<RarityKey, { color: string; bg: string; border: string }> = {
+const RARITY_STYLES: Record<RarityKey, { color: string; bg: string;   border: string }> = {
   'Common':     { color: '#90a4ae', bg: '#90a4ae11', border: '#90a4ae44' },
   'Uncommon':   { color: '#66bb6a', bg: '#66bb6a11', border: '#66bb6a44' },
   'Rare':       { color: '#4fc3f7', bg: '#4fc3f711', border: '#4fc3f744' },
@@ -52,88 +53,78 @@ export default function Pokedex() {
     <View style={styles.container}>
       <StatusBar barStyle="light-content" />
 
-      {/* Header */}
-      <View style={styles.header}>
-        <View style={styles.headerRow}>
-          <View style={styles.pokeball}>
-            <View style={styles.pokeballCenter} />
+      <View style={{ zIndex: 1000, elevation: 1000 }}>
+        <View style={styles.header}>
+          <View style={styles.headerRow}>
+            <View style={styles.pokeball}>
+              <View style={styles.pokeballCenter} />
+            </View>
+            <Text style={styles.title}>Ma Collection</Text>
           </View>
-          <Text style={styles.title}>Ma Collection</Text>
+          <Text style={styles.subtitle}>POKÉMON TCG · VAULT DU DRESSEUR</Text>
+          <View style={styles.statsBar}>
+            <View style={styles.stat}>
+              <Text style={styles.statValue}>{stats.total}</Text>
+              <Text style={styles.statLabel}>CARTES</Text>
+            </View>
+            <View style={styles.statDivider} />
+            <View style={styles.stat}>
+              <Text style={styles.statValue}>{stats.rares}</Text>
+              <Text style={styles.statLabel}>RARES</Text>
+            </View>
+            <View style={styles.statDivider} />
+            <View style={styles.stat}>
+              <Text style={styles.statValue}>{stats.illustrateurs}</Text>
+              <Text style={styles.statLabel}>ILLUS.</Text>
+            </View>
+          </View>
         </View>
-        <Text style={styles.subtitle}>POKÉMON TCG · VAULT DU DRESSEUR</Text>
-
-        <View style={styles.statsBar}>
-          <View style={styles.stat}>
-            <Text style={styles.statValue}>{stats.total}</Text>
-            <Text style={styles.statLabel}>CARTES</Text>
-          </View>
-          <View style={styles.statDivider} />
-          <View style={styles.stat}>
-            <Text style={styles.statValue}>{stats.rares}</Text>
-            <Text style={styles.statLabel}>RARES</Text>
-          </View>
-          <View style={styles.statDivider} />
-          <View style={styles.stat}>
-            <Text style={styles.statValue}>{stats.illustrateurs}</Text>
-            <Text style={styles.statLabel}>ILLUS.</Text>
-          </View>
-        </View>
+        <DropDown />
       </View>
 
-      {/* Divider */}
       <View style={styles.divider} />
-
-      {/* Card Grid */}
-      <FlatList
-        data={pokemons}
-        keyExtractor={(item) => item.id.toString()}
-        numColumns={2}
-        columnWrapperStyle={styles.row}
-        contentContainerStyle={styles.grid}
-        renderItem={({ item }) => {
-          const rs = getRarityStyle(item.rarity);
-          return (
-            <View style={styles.card}>
-              <View style={[styles.cardInner, { borderColor: rs.border }]}>
-
-                {/* Image */}
-                <View style={styles.imgWrap}>
-                  <Image
-                    source={{ uri: item.image + '/high.png' }}
-                    style={styles.image}
-                    resizeMode="contain"
-                  />
-                  {/* Quantity badge */}
-                  <View style={styles.qtyBadge}>
-                    <Text style={styles.qtyText}>×{item.quantity}</Text>
+      <View style={{ flex: 1, zIndex: 1, elevation: 1 }}>
+        <FlatList
+          data={pokemons}
+          keyExtractor={(item) => item.id.toString()}
+          numColumns={2}
+          columnWrapperStyle={styles.row}
+          contentContainerStyle={styles.grid}
+          renderItem={({ item }) => {
+            const rs = getRarityStyle(item.rarity);
+            return (
+              <View style={styles.card}>
+                <View style={[styles.cardInner, { borderColor: rs.border }]}>
+                  <View style={styles.imgWrap}>
+                    <Image
+                      source={{ uri: item.image + '/high.png' }}
+                      style={styles.image}
+                      resizeMode="contain"
+                    />
+                    <View style={styles.qtyBadge}>
+                      <Text style={styles.qtyText}>×{item.quantity}</Text>
+                    </View>
                   </View>
-                </View>
-
-                {/* Name */}
-                <Text style={styles.cardName} numberOfLines={1}>{item.name}</Text>
-
-                {/* Rarity badge */}
-                {item.rarity && (
-                  <View style={[styles.rarityBadge, { backgroundColor: rs.bg, borderColor: rs.border }]}>
-                    <Text style={[styles.rarityText, { color: rs.color }]}>
-                      {item.rarity.toUpperCase()}
+                  <Text style={styles.cardName} numberOfLines={1}>{item.name}</Text>
+                  {item.rarity && (
+                    <View style={[styles.rarityBadge, { backgroundColor: rs.bg, borderColor: rs.border }]}>
+                      <Text style={[styles.rarityText, { color: rs.color }]}>
+                        {item.rarity.toUpperCase()}
+                      </Text>
+                    </View>
+                  )}
+                  {item.illustrator && (
+                    <Text style={styles.illustrator} numberOfLines={1}>
+                      <Text style={{ color: '#9c6bff' }}>✦ </Text>
+                      {item.illustrator}
                     </Text>
-                  </View>
-                )}
-
-                {/* Illustrator */}
-                {item.illustrator && (
-                  <Text style={styles.illustrator} numberOfLines={1}>
-                    <Text style={{ color: '#9c6bff' }}>✦ </Text>
-                    {item.illustrator}
-                  </Text>
-                )}
-
+                  )}
+                </View>
               </View>
-            </View>
-          );
-        }}
-      />
+            );
+          }}
+        />
+      </View>
     </View>
   );
 }
@@ -143,8 +134,6 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#0a0a12',
   },
-
-  // Header
   header: {
     paddingTop: 56,
     paddingHorizontal: 24,
@@ -217,16 +206,12 @@ const styles = StyleSheet.create({
     height: 28,
     backgroundColor: '#f0c04022',
   },
-
-  // Divider
   divider: {
     height: 1,
     marginHorizontal: 24,
     backgroundColor: '#a8842a55',
     marginBottom: 16,
   },
-
-  // Grid
   grid: {
     paddingHorizontal: 16,
     paddingBottom: 40,
@@ -235,8 +220,6 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     marginBottom: 16,
   },
-
-  // Card
   card: {
     width: '48%',
   },
