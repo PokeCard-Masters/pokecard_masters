@@ -35,6 +35,7 @@ export default function Pokedex() {
       headers: { 'Authorization': `Bearer ${token}` },
     });
     const data = await response.json();
+    console.log('data:', data);
     setPokemons(data);
   };
 
