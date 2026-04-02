@@ -1,5 +1,5 @@
-import { StyleSheet, View, Text, FlatList, Image, StatusBar, Platform } from 'react-native';
-import { useEffect, useState } from 'react';
+import { StyleSheet, View, Text, FlatList, Image, StatusBar, Platform, ActivityIndicator } from 'react-native';
+import { useEffect, useState, useCallback } from 'react';
 import * as SecureStore from 'expo-secure-store';
 import { API_BASE_URL } from '@/config/auth';
 import DropDown from '@/components/DropDown';
@@ -14,9 +14,14 @@ type Pokemon = {
   quantity: number;
 };
 
+type PaginatedResponse = {
+  items: Pokemon[];
+  count: number;
+};
+
 type RarityKey = 'Common' | 'Uncommon' | 'Rare' | 'Ultra Rare' | 'Secret';
 
-const RARITY_STYLES: Record<RarityKey, { color: string; bg: string;   border: string }> = {
+const RARITY_STYLES: Record<RarityKey, { color: string; bg: string; border: string }> = {
   'Common':     { color: '#90a4ae', bg: '#90a4ae11', border: '#90a4ae44' },
   'Uncommon':   { color: '#66bb6a', bg: '#66bb6a11', border: '#66bb6a44' },
   'Rare':       { color: '#4fc3f7', bg: '#4fc3f711', border: '#4fc3f744' },
@@ -24,22 +29,51 @@ const RARITY_STYLES: Record<RarityKey, { color: string; bg: string;   border: st
   'Secret':     { color: '#9c6bff', bg: '#9c6bff11', border: '#9c6bff44' },
 };
 
+const PAGE_SIZE = 20;
+
 export default function Pokedex() {
   const [pokemons, setPokemons] = useState<Pokemon[]>([]);
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(true);
+  const [loading, setLoading] = useState(false);
 
-  const getData = async () => {
-    const token = Platform.OS === 'web'
-      ? localStorage.getItem('auth_token')
-      : await SecureStore.getItemAsync('auth_token');
-    const response = await fetch(`${API_BASE_URL}/api/player/card`, {
-      headers: { 'Authorization': `Bearer ${token}` },
-    });
-    const data = await response.json();
-    console.log('data:', data);
-    setPokemons(data);
+  const fetchPage = useCallback(async (pageToLoad: number) => {
+    if (loading || !hasMore) return;
+    setLoading(true);
+    try {
+      const response = await fetch(
+        `${API_BASE_URL}/api/user/pagination?page=${pageToLoad}&limit=${PAGE_SIZE}`
+      );
+      if (!response.ok) throw new Error(`Erreur HTTP : ${response.status}`);
+
+      const data: PaginatedResponse = await response.json();
+      const newItems = data.items;
+
+      setPokemons((prev) => {
+        const updated = [...prev, ...newItems];
+        if (updated.length >= data.count) {
+          setHasMore(false);
+        }
+        return updated;
+      });
+    } catch (error) {
+      console.error('Erreur fetch pagination :', error);
+    } finally {
+      setLoading(false);
+    }
+  }, [loading, hasMore]);
+
+  useEffect(() => {
+    fetchPage(1);
+  }, []);
+
+  const handleEndReached = () => {
+    if (hasMore && !loading) {
+      const nextPage = page + 1;
+      setPage(nextPage);
+      fetchPage(nextPage);
+    }
   };
-
-  useEffect(() => { getData(); }, []);
 
   const getRarityStyle = (rarity: string | null) =>
     RARITY_STYLES[(rarity as RarityKey)] ?? RARITY_STYLES['Common'];
@@ -91,6 +125,9 @@ export default function Pokedex() {
           numColumns={2}
           columnWrapperStyle={styles.row}
           contentContainerStyle={styles.grid}
+          onEndReached={handleEndReached}
+          onEndReachedThreshold={0.5}
+          ListFooterComponent={loading ? <ActivityIndicator color="#f0c040" style={{ marginVertical: 16 }} /> : null}
           renderItem={({ item }) => {
             const rs = getRarityStyle(item.rarity);
             return (
