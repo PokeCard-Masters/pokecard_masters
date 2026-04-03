@@ -62,6 +62,7 @@ class BoosterCardOut(Schema):
     illustrator: str
 
 class BoosterCountOut(Schema):
+    cards: list[BoosterCardOut]
     booster_count: int
 
 @api.get("/hello")
@@ -182,7 +183,7 @@ RARE_WEIGHTS = {
 }
 
 
-@api.post("/booster/open", auth=jwt_auth, response={200: list[BoosterCardOut], 404: ErrorOut, 500: ErrorOut})
+@api.post("/booster/open", auth=jwt_auth, response={200: BoosterCountOut, 404: ErrorOut, 500: ErrorOut})
 def open_booster(request):
     claims = request.auth_user
     user_id = claims["sub"]
@@ -230,17 +231,23 @@ def open_booster(request):
                 pc.quantity = F("quantity") + 1
                 pc.save(update_fields=["quantity"])
 
-    return 200, [
-        {
-            "name": c.name,
-            "card_id": c.card_id,
-            "image": c.image,
-            "category": c.category or "",
-            "rarity": c.rarity or "",
-            "illustrator": c.illustrator or "",
-        }
-        for c in pulled
-    ]
+    User.objects.filter(pk=user.pk).update(booster_count=F("booster_count") + 1)
+    user.refresh_from_db(fields=["booster_count"])
+
+    return 200, {
+        "cards": [
+            {
+                "name": c.name,
+                "card_id": c.card_id,
+                "image": c.image,
+                "category": c.category or "",
+                "rarity": c.rarity or "",
+                "illustrator": c.illustrator or "",
+            }
+            for c in pulled
+        ],
+        "booster_count": user.booster_count,
+    }
 
 @api.get("/booster/count",response={200: BoosterCountOut, 404: ErrorOut})
 def get_booster_count(request):
@@ -248,7 +255,7 @@ def get_booster_count(request):
     #user_id = claims["sub"]
 
     try:
-        user = User.objects.only("booster_count").get(id=1)
+        user = User.objects.only("booster_count").get(id=9)
         #user.booster_count += 1
         #user.save()
     except User.DoesNotExist:

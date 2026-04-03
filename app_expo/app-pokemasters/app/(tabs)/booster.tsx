@@ -22,6 +22,7 @@ interface Card {
   category: string;
   rarity: string;
   illustrator: string;
+  booster_count: number;
 }
 
 interface Booster {
@@ -51,10 +52,10 @@ const PokemonBoosterOpener = () => {
   const CARD_WIDTH = (width - 52) / 2;
   const CARD_IMAGE_HEIGHT = CARD_WIDTH * 1.4;
   const [pulledCards, setPulledCards] = useState<Card[]>([]);
-  const [booster, setBooster] = useState<Booster[]>([]);
   const [isOpening, setIsOpening] = useState(false);
   const [showCards, setShowCards] = useState(false);
   const [fadeAnim] = useState(new Animated.Value(0));
+  const [boosterCount, setBoosterCount] = useState(0);
 
   const openBooster = async () => {
     if (!token) return;
@@ -64,16 +65,14 @@ const PokemonBoosterOpener = () => {
 
     try {
       const response = await apiFetch('/api/booster/open', token, { method: 'POST' });
-      const response_2 = await apiFetch('/api/booster/count', token, { method: 'GET' })
 
       if (!response.ok) {
         throw new Error(`Server error: ${response.status}`);
       }
 
-      const data: Card[] = await response.json();
-      const data_2: Booster[] = await response_2.json();
-      setBooster(data_2);
-      setPulledCards(data);
+      const data: { cards: Card[]; booster_count: number } = await response.json();
+      setPulledCards(data.cards);
+      setBoosterCount(data.booster_count);
       setIsOpening(false);
       setShowCards(true);
       Animated.timing(fadeAnim, { toValue: 1, duration: 600, useNativeDriver: true }).start();
@@ -81,9 +80,6 @@ const PokemonBoosterOpener = () => {
       console.error('Error opening booster:', error);
       setIsOpening(false);
     }
-  const stats = {
-    total: booster.length,
-  }
   };
 
   return (
@@ -121,7 +117,7 @@ const PokemonBoosterOpener = () => {
             <ActivityIndicator color="#f0c040" style={{ marginTop: 12 }} />
           )}
           <View style={styles.stat}>
-              <Text style={styles.statValue}>{stats.total}</Text>
+              <Text style={styles.statValue}>{boosterCount}</Text>
               <Text style={styles.statLabel}>Boosters ouverts</Text>
           </View>
         </View>
