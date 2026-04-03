@@ -279,6 +279,7 @@ dependencies = [
     { name = "mysqlclient" },
     { name = "pyjwt" },
     { name = "pymysql" },
+    { name = "python-dotenv" },
     { name = "requests" },
 ]
 
@@ -293,6 +294,7 @@ requires-dist = [
     { name = "mysqlclient" },
     { name = "pyjwt", specifier = ">=2.10.1" },
     { name = "pymysql", specifier = ">=1.1.2" },
+    { name = "python-dotenv", specifier = ">=1.2.2" },
     { name = "requests", specifier = ">=2.32.5" },
 ]
 

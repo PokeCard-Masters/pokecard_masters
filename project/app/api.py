@@ -61,6 +61,9 @@ class BoosterCardOut(Schema):
     rarity: str
     illustrator: str
 
+class BoosterCountOut(Schema):
+    booster_count: int
+
 @api.get("/hello")
 def hello(request):
     return "Hello world"
@@ -238,3 +241,17 @@ def open_booster(request):
         }
         for c in pulled
     ]
+
+@api.get("/booster/count",response={200: BoosterCountOut, 404: ErrorOut})
+def get_booster_count(request):
+    #claims = request.auth_user
+    #user_id = claims["sub"]
+
+    try:
+        user = User.objects.only("booster_count").get(id=1)
+        #user.booster_count += 1
+        #user.save()
+    except User.DoesNotExist:
+        return 404, {"detail": "User not found"}
+
+    return 200, {user.booster_count}

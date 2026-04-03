@@ -13,6 +13,7 @@ import {
 } from 'react-native';
 import { useAuth } from '@/context/AuthContext';
 import { apiFetch } from '@/services/api';
+import { Int32 } from 'react-native/Libraries/Types/CodegenTypes';
 
 interface Card {
   name: string;
@@ -21,6 +22,10 @@ interface Card {
   category: string;
   rarity: string;
   illustrator: string;
+}
+
+interface Booster {
+  booster_count: number;
 }
 
 
@@ -46,6 +51,7 @@ const PokemonBoosterOpener = () => {
   const CARD_WIDTH = (width - 52) / 2;
   const CARD_IMAGE_HEIGHT = CARD_WIDTH * 1.4;
   const [pulledCards, setPulledCards] = useState<Card[]>([]);
+  const [booster, setBooster] = useState<Booster[]>([]);
   const [isOpening, setIsOpening] = useState(false);
   const [showCards, setShowCards] = useState(false);
   const [fadeAnim] = useState(new Animated.Value(0));
@@ -58,12 +64,15 @@ const PokemonBoosterOpener = () => {
 
     try {
       const response = await apiFetch('/api/booster/open', token, { method: 'POST' });
+      const response_2 = await apiFetch('/api/booster/count', token, { method: 'GET' })
 
       if (!response.ok) {
         throw new Error(`Server error: ${response.status}`);
       }
 
       const data: Card[] = await response.json();
+      const data_2: Booster[] = await response_2.json();
+      setBooster(data_2);
       setPulledCards(data);
       setIsOpening(false);
       setShowCards(true);
@@ -72,6 +81,9 @@ const PokemonBoosterOpener = () => {
       console.error('Error opening booster:', error);
       setIsOpening(false);
     }
+  const stats = {
+    total: booster.length,
+  }
   };
 
   return (
@@ -108,6 +120,10 @@ const PokemonBoosterOpener = () => {
           {isOpening && (
             <ActivityIndicator color="#f0c040" style={{ marginTop: 12 }} />
           )}
+          <View style={styles.stat}>
+              <Text style={styles.statValue}>{stats.total}</Text>
+              <Text style={styles.statLabel}>Boosters ouverts</Text>
+          </View>
         </View>
 
         {/* Initial message */}
@@ -216,6 +232,25 @@ const styles = StyleSheet.create({
     color: '#6b6b88',
     letterSpacing: 3,
     marginTop: 2,
+  },
+  stat: {
+    alignItems: 'center',
+    gap: 2,
+  },
+  statValue: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#f0c040',
+  },
+  statLabel: {
+    fontSize: 9,
+    color: '#6b6b88',
+    letterSpacing: 2,
+  },
+  statDivider: {
+    width: 1,
+    height: 28,
+    backgroundColor: '#f0c04022',
   },
   divider: {
     height: 1,
