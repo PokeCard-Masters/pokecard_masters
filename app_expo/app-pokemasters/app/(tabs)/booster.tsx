@@ -25,9 +25,6 @@ interface Card {
   booster_count: number;
 }
 
-interface Booster {
-  booster_count: number;
-}
 
 
 const RARITY_STYLES: Record<string, { color: string; bg: string; border: string }> = {

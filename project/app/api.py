@@ -248,17 +248,3 @@ def open_booster(request):
         ],
         "booster_count": user.booster_count,
     }
-
-@api.get("/booster/count",response={200: BoosterCountOut, 404: ErrorOut})
-def get_booster_count(request):
-    #claims = request.auth_user
-    #user_id = claims["sub"]
-
-    try:
-        user = User.objects.only("booster_count").get(id=9)
-        #user.booster_count += 1
-        #user.save()
-    except User.DoesNotExist:
-        return 404, {"detail": "User not found"}
-
-    return 200, {user.booster_count}
