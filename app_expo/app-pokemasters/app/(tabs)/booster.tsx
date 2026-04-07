@@ -13,6 +13,7 @@ import {
 } from 'react-native';
 import { useAuth } from '@/context/AuthContext';
 import { apiFetch } from '@/services/api';
+import { Int32 } from 'react-native/Libraries/Types/CodegenTypes';
 
 interface Card {
   name: string;
@@ -21,7 +22,9 @@ interface Card {
   category: string;
   rarity: string;
   illustrator: string;
+  booster_count: number;
 }
+
 
 
 const RARITY_STYLES: Record<string, { color: string; bg: string; border: string }> = {
@@ -49,6 +52,7 @@ const PokemonBoosterOpener = () => {
   const [isOpening, setIsOpening] = useState(false);
   const [showCards, setShowCards] = useState(false);
   const [fadeAnim] = useState(new Animated.Value(0));
+  const [boosterCount, setBoosterCount] = useState(0);
 
   const openBooster = async () => {
     if (!token) return;
@@ -63,8 +67,9 @@ const PokemonBoosterOpener = () => {
         throw new Error(`Server error: ${response.status}`);
       }
 
-      const data: Card[] = await response.json();
-      setPulledCards(data);
+      const data: { cards: Card[]; booster_count: number } = await response.json();
+      setPulledCards(data.cards);
+      setBoosterCount(data.booster_count);
       setIsOpening(false);
       setShowCards(true);
       Animated.timing(fadeAnim, { toValue: 1, duration: 600, useNativeDriver: true }).start();
@@ -108,6 +113,10 @@ const PokemonBoosterOpener = () => {
           {isOpening && (
             <ActivityIndicator color="#f0c040" style={{ marginTop: 12 }} />
           )}
+          <View style={styles.stat}>
+              <Text style={styles.statValue}>{boosterCount}</Text>
+              <Text style={styles.statLabel}>Boosters ouverts</Text>
+          </View>
         </View>
 
         {/* Initial message */}
@@ -216,6 +225,25 @@ const styles = StyleSheet.create({
     color: '#6b6b88',
     letterSpacing: 3,
     marginTop: 2,
+  },
+  stat: {
+    alignItems: 'center',
+    gap: 2,
+  },
+  statValue: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#f0c040',
+  },
+  statLabel: {
+    fontSize: 9,
+    color: '#6b6b88',
+    letterSpacing: 2,
+  },
+  statDivider: {
+    width: 1,
+    height: 28,
+    backgroundColor: '#f0c04022',
   },
   divider: {
     height: 1,
