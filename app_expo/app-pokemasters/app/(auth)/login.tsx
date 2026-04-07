@@ -93,15 +93,6 @@ export default function LoginScreen() {
             />
           </Text>
         </Pressable>
-
-        {Platform.OS === "ios" && (
-          <AppleAuthentication.AppleAuthenticationButton
-            buttonType={AppleAuthentication.AppleAuthenticationButtonType.SIGN_IN}
-            buttonStyle={AppleAuthentication.AppleAuthenticationButtonStyle.BLACK}
-            cornerRadius={9}
-            style={styles.buttonApple}
-          />
-        )}
       </View>
     </View>
   );
