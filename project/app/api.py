@@ -7,6 +7,8 @@ from django.db import transaction
 from django.db.models import F
 from .models import Card, User, PlayerCard
 from .authentification import GoogleJWTAuth, create_app_jwt
+from ninja.pagination import paginate
+from typing import Optional
 
 jwt_auth = GoogleJWTAuth()
 
@@ -16,6 +18,8 @@ api = NinjaAPI(auth=None)
 class CardsOut(Schema):
     id: int
     name: str
+    image: str
+    types: str | None
 
 
 class UserOut(Schema):
@@ -248,3 +252,16 @@ def open_booster(request):
         ],
         "booster_count": user.booster_count,
     }
+
+@api.get('user/pagination', response={200: list[CardsOut], 404: ErrorOut, 500: TokenOut})
+@paginate
+def pagination(request):
+        return Card.objects.all()
+
+
+@api.get("/cards", response=List[CardsOut])
+def get_cards(request, types: Optional[str] = None):
+    cards = Card.objects.all()
+    if types:
+        cards = cards.filter(types__icontains=types)
+    return cards
