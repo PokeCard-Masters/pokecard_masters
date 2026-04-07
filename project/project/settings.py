@@ -89,9 +89,9 @@ WSGI_APPLICATION = "project.wsgi.application"
 DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.mysql",
-        "NAME": "pokemon_2",
-        "USER": "root",
-        "PASSWORD": "test",
+        "NAME": os.environ["DATABASE_NAME"],
+        "USER": os.environ["DATABASE_USER"],
+        "PASSWORD": os.environ["DATABASE_PASSWORD"],
         "PORT": "3306",
         "HOST": "127.0.0.1",
     },
