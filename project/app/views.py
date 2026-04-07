@@ -3,6 +3,7 @@ from django.http import JsonResponse
 import requests
 from .models import Card
 
+
 def import_list(request):
     result = Card.objects.all()
     pokemon_list = []
@@ -18,7 +19,7 @@ def import_list(request):
             }
         )
     return JsonResponse({"success": pokemon_list})
-    
+
 
 def import_api(request):
     r = requests.get("https://api.tcgdex.net/v2/en/cards")
@@ -33,6 +34,11 @@ def import_api(request):
             r_card_json = r_card.json()
             category = r_card_json["category"]
             illustrator = None
+            types = r_card_json.get("types")
+            evolution = r_card_json.get("stage", "") 
+            description = r_card_json.get("description")
+            evolve_from = r_card_json.get("evolveFrom")
+
             if "illustrator" in r_card_json:
                 illustrator = r_card_json["illustrator"]
             rarity = r_card_json["rarity"]
@@ -44,6 +50,10 @@ def import_api(request):
                     category=category,
                     illustrator=illustrator,
                     rarity=rarity,
+                    types=types,
+                    evolution=evolution,
+                    description=description,
+                    evolve_from=evolve_from
                 )
                 new_pokemon.save()
                 number = number + 1
@@ -52,6 +62,7 @@ def import_api(request):
         else:
             print(f"{i['name']} does not have image")
     return JsonResponse({"success": "ok"})
+
 
 def card(request):
     r = requests.get("https://api.tcgdex.net/v2/en/cards/swsh3-40")

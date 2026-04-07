@@ -35,11 +35,6 @@ export default function Index() {
           </Pressable>
         </Link>
       </View>
-
-      {/* Logout */}
-      <Pressable style={styles.logoutBtn} onPress={signOut}>
-        <Text style={styles.logoutText}>Se déconnecter</Text>
-      </Pressable>
     </View>
   );
 }

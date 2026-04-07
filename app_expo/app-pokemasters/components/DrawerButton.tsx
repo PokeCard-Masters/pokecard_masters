@@ -3,6 +3,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from 'expo-router';
 import { DrawerActions } from '@react-navigation/native';
 
+
 export default function Drawerbutton() {
     const navigation = useNavigation();
     return (

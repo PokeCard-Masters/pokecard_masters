@@ -1,6 +1,5 @@
-import { StyleSheet, View, Text, FlatList, Image, StatusBar, Platform, ActivityIndicator } from 'react-native';
+import { StyleSheet, View, Text, FlatList, Image, StatusBar, ActivityIndicator } from 'react-native';
 import { useEffect, useState, useCallback } from 'react';
-import * as SecureStore from 'expo-secure-store';
 import { API_BASE_URL } from '@/config/auth';
 import DropDown from '@/components/DropDown';
 
@@ -29,7 +28,7 @@ const RARITY_STYLES: Record<RarityKey, { color: string; bg: string; border: stri
   'Secret':     { color: '#9c6bff', bg: '#9c6bff11', border: '#9c6bff44' },
 };
 
-const PAGE_SIZE = 20;
+const PAGE_SIZE = 3;
 
 export default function Pokedex() {
   const [pokemons, setPokemons] = useState<Pokemon[]>([]);
