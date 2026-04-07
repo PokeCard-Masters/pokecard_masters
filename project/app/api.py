@@ -253,7 +253,7 @@ def open_booster(request):
         "booster_count": user.booster_count,
     }
 
-@api.get('user/pagination', response={200: list[CardsOut], 404: ErrorOut, 500: TokenOut})
+@api.get('/user/pagination', response={200: list[CardsOut], 404: ErrorOut, 500: TokenOut})
 @paginate
 def pagination(request):
         return Card.objects.all()
