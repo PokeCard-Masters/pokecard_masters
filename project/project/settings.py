@@ -62,7 +62,10 @@ AUTHENTICATION_BACKENDS = [
     "django.contrib.auth.backends.ModelBackend",
 ]
 
-CORS_ALLOWED_ORIGINS = ["http://localhost:8081"]
+CORS_ALLOWED_ORIGINS = [
+    "http://localhost:8081",
+    "https://pokecardmasters.lebaron.sh",
+]
 ROOT_URLCONF = "project.urls"
 
 TEMPLATES = [
