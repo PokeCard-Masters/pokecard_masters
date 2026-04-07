@@ -9,11 +9,12 @@ const STATIC_ITEMS = [
 
 type DropDownProps = {
   onSelect?: (value: string | null) => void;
+  defaultValue?: string | null;
 };
 
-export default function DropDown({ onSelect }: DropDownProps) {
+export default function DropDown({ onSelect, defaultValue = null }: DropDownProps) {
   const [open, setOpen] = useState(false);
-  const [value, setValue] = useState<string | null>(null);
+  const [value, setValue] = useState<string | null>(defaultValue);
   const [items, setItems] = useState(STATIC_ITEMS);
 
   return (

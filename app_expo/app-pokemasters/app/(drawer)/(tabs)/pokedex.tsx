@@ -1,6 +1,8 @@
-import { StyleSheet, View, Text, FlatList, Image, StatusBar, ActivityIndicator } from 'react-native';
-import { useEffect, useState, useCallback } from 'react';
+import { StyleSheet, View, Text, FlatList, Image, StatusBar, ActivityIndicator, TouchableOpacity } from 'react-native';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { API_BASE_URL } from '@/config/auth';
+import { useAuth } from '@/context/AuthContext';
+import { apiFetch } from '@/services/api';
 import DropDown from '@/components/DropDown';
 
 type Pokemon = {
@@ -28,16 +30,22 @@ const RARITY_STYLES: Record<RarityKey, { color: string; bg: string; border: stri
   'Secret':     { color: '#9c6bff', bg: '#9c6bff11', border: '#9c6bff44' },
 };
 
-const PAGE_SIZE = 3;
+const PAGE_SIZE = 10;
 
 export default function Pokedex() {
+  const { token } = useAuth();
   const [pokemons, setPokemons] = useState<Pokemon[]>([]);
   const [page, setPage] = useState(1);
-  const [hasMore, setHasMore] = useState(true);
+  const [totalCount, setTotalCount] = useState(0);
   const [loading, setLoading] = useState(false);
+  const [filter, setFilter] = useState<string | null>('pokedex');
+  const filterRef = useRef(filter);
+  const listRef = useRef<FlatList>(null);
+  const [userStats, setUserStats] = useState({ total: 0, rares: 0, illustrateurs: 0 });
 
-  const fetchPage = useCallback(async (pageToLoad: number) => {
-    if (loading || !hasMore) return;
+  const totalPages = Math.ceil(totalCount / PAGE_SIZE);
+
+  const fetchPokedex = useCallback(async (pageToLoad: number) => {
     setLoading(true);
     try {
       const response = await fetch(
@@ -46,42 +54,82 @@ export default function Pokedex() {
       if (!response.ok) throw new Error(`Erreur HTTP : ${response.status}`);
 
       const data: PaginatedResponse = await response.json();
-      const newItems = data.items;
-
-      setPokemons((prev) => {
-        const updated = [...prev, ...newItems];
-        if (updated.length >= data.count) {
-          setHasMore(false);
-        }
-        return updated;
-      });
+      if (filterRef.current !== 'pokedex') return;
+      setPokemons(data.items);
+      setTotalCount(data.count);
     } catch (error) {
       console.error('Erreur fetch pagination :', error);
     } finally {
       setLoading(false);
     }
-  }, [loading, hasMore]);
-
-  useEffect(() => {
-    fetchPage(1);
   }, []);
 
-  const handleEndReached = () => {
-    if (hasMore && !loading) {
-      const nextPage = page + 1;
-      setPage(nextPage);
-      fetchPage(nextPage);
+  const fetchMyCards = useCallback(async () => {
+    if (!token) return;
+    setLoading(true);
+    try {
+      const response = await apiFetch('/api/player/card', token);
+      if (!response.ok) throw new Error(`Erreur HTTP : ${response.status}`);
+
+      const data: Pokemon[] = await response.json();
+      if (filterRef.current !== 'mes_cartes') return;
+      setPokemons(data);
+      setTotalCount(data.length);
+      setUserStats({
+        total: data.length,
+        rares: data.filter(p => p.rarity === 'Rare' || p.rarity === 'Ultra Rare' || p.rarity === 'Secret').length,
+        illustrateurs: new Set(data.map(p => p.illustrator).filter(Boolean)).size,
+      });
+    } catch (error) {
+      console.error('Erreur fetch mes cartes :', error);
+    } finally {
+      setLoading(false);
     }
+  }, [token]);
+
+  const handleFilterChange = useCallback((value: string | null) => {
+    setFilter(value);
+    filterRef.current = value;
+    setPokemons([]);
+    setPage(1);
+    setTotalCount(0);
+
+    if (value === 'mes_cartes') {
+      fetchMyCards();
+    }
+  }, [fetchMyCards]);
+
+  // Fetch user card stats once on mount
+  useEffect(() => {
+    if (!token) return;
+    (async () => {
+      try {
+        const response = await apiFetch('/api/player/card', token);
+        if (!response.ok) return;
+        const data: Pokemon[] = await response.json();
+        setUserStats({
+          total: data.length,
+          rares: data.filter(p => p.rarity === 'Rare' || p.rarity === 'Ultra Rare' || p.rarity === 'Secret').length,
+          illustrateurs: new Set(data.map(p => p.illustrator).filter(Boolean)).size,
+        });
+      } catch {}
+    })();
+  }, [token]);
+
+  useEffect(() => {
+    if (filter === 'pokedex') {
+      fetchPokedex(page);
+    }
+  }, [filter, page]);
+
+  const goToPage = (newPage: number) => {
+    if (newPage < 1 || newPage > totalPages || loading) return;
+    setPage(newPage);
+    listRef.current?.scrollToOffset({ offset: 0, animated: true });
   };
 
   const getRarityStyle = (rarity: string | null) =>
     RARITY_STYLES[(rarity as RarityKey)] ?? RARITY_STYLES['Common'];
-
-  const stats = {
-    total: pokemons.length,
-    rares: pokemons.filter(p => p.rarity === 'Rare' || p.rarity === 'Ultra Rare' || p.rarity === 'Secret').length,
-    illustrateurs: new Set(pokemons.map(p => p.illustrator).filter(Boolean)).size,
-  };
 
   return (
     <View style={styles.container}>
@@ -98,35 +146,55 @@ export default function Pokedex() {
           <Text style={styles.subtitle}>POKÉMON TCG · VAULT DU DRESSEUR</Text>
           <View style={styles.statsBar}>
             <View style={styles.stat}>
-              <Text style={styles.statValue}>{stats.total}</Text>
+              <Text style={styles.statValue}>{userStats.total}</Text>
               <Text style={styles.statLabel}>CARTES</Text>
             </View>
             <View style={styles.statDivider} />
             <View style={styles.stat}>
-              <Text style={styles.statValue}>{stats.rares}</Text>
+              <Text style={styles.statValue}>{userStats.rares}</Text>
               <Text style={styles.statLabel}>RARES</Text>
             </View>
             <View style={styles.statDivider} />
             <View style={styles.stat}>
-              <Text style={styles.statValue}>{stats.illustrateurs}</Text>
+              <Text style={styles.statValue}>{userStats.illustrateurs}</Text>
               <Text style={styles.statLabel}>ILLUS.</Text>
             </View>
           </View>
         </View>
-        <DropDown />
+        <DropDown onSelect={handleFilterChange} defaultValue="pokedex" />
       </View>
 
       <View style={styles.divider} />
       <View style={{ flex: 1, zIndex: 1, elevation: 1 }}>
+        {loading ? (
+          <ActivityIndicator color="#f0c040" style={{ marginVertical: 32 }} />
+        ) : (
         <FlatList
+          ref={listRef}
           data={pokemons}
           keyExtractor={(item) => item.id.toString()}
           numColumns={2}
           columnWrapperStyle={styles.row}
           contentContainerStyle={styles.grid}
-          onEndReached={handleEndReached}
-          onEndReachedThreshold={0.5}
-          ListFooterComponent={loading ? <ActivityIndicator color="#f0c040" style={{ marginVertical: 16 }} /> : null}
+          ListFooterComponent={filter === 'pokedex' && totalPages > 1 ? (
+            <View style={styles.pagination}>
+              <TouchableOpacity
+                style={[styles.pageBtn, page <= 1 && styles.pageBtnDisabled]}
+                onPress={() => goToPage(page - 1)}
+                disabled={page <= 1}
+              >
+                <Text style={[styles.pageBtnText, page <= 1 && styles.pageBtnTextDisabled]}>Préc.</Text>
+              </TouchableOpacity>
+              <Text style={styles.pageInfo}>{page} / {totalPages}</Text>
+              <TouchableOpacity
+                style={[styles.pageBtn, page >= totalPages && styles.pageBtnDisabled]}
+                onPress={() => goToPage(page + 1)}
+                disabled={page >= totalPages}
+              >
+                <Text style={[styles.pageBtnText, page >= totalPages && styles.pageBtnTextDisabled]}>Suiv.</Text>
+              </TouchableOpacity>
+            </View>
+          ) : null}
           renderItem={({ item }) => {
             const rs = getRarityStyle(item.rarity);
             return (
@@ -161,6 +229,7 @@ export default function Pokedex() {
             );
           }}
         />
+        )}
       </View>
     </View>
   );
@@ -322,5 +391,38 @@ const styles = StyleSheet.create({
     fontSize: 9,
     color: '#6b6b88',
     textAlign: 'center',
+  },
+  pagination: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: 16,
+    paddingVertical: 20,
+  },
+  pageBtn: {
+    backgroundColor: '#1a1a2e',
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#f0c04055',
+    paddingHorizontal: 18,
+    paddingVertical: 10,
+  },
+  pageBtnDisabled: {
+    borderColor: '#333',
+    opacity: 0.4,
+  },
+  pageBtnText: {
+    color: '#f0c040',
+    fontSize: 12,
+    fontWeight: '700',
+    letterSpacing: 1,
+  },
+  pageBtnTextDisabled: {
+    color: '#666',
+  },
+  pageInfo: {
+    color: '#e8e8f0',
+    fontSize: 14,
+    fontWeight: '700',
   },
 });
