@@ -65,6 +65,10 @@ class BoosterCardOut(Schema):
     rarity: str
     illustrator: str
 
+class BoosterCountOut(Schema):
+    cards: list[BoosterCardOut]
+    booster_count: int
+
 @api.get("/hello")
 def hello(request):
     return "Hello world"
@@ -183,7 +187,7 @@ RARE_WEIGHTS = {
 }
 
 
-@api.post("/booster/open", auth=jwt_auth, response={200: list[BoosterCardOut], 404: ErrorOut, 500: ErrorOut})
+@api.post("/booster/open", auth=jwt_auth, response={200: BoosterCountOut, 404: ErrorOut, 500: ErrorOut})
 def open_booster(request):
     claims = request.auth_user
     user_id = claims["sub"]
@@ -231,21 +235,27 @@ def open_booster(request):
                 pc.quantity = F("quantity") + 1
                 pc.save(update_fields=["quantity"])
 
-    return 200, [
-        {
-            "name": c.name,
-            "card_id": c.card_id,
-            "image": c.image,
-            "category": c.category or "",
-            "rarity": c.rarity or "",
-            "illustrator": c.illustrator or "",
-        }
-        for c in pulled
-    ]
+    User.objects.filter(pk=user.pk).update(booster_count=F("booster_count") + 1)
+    user.refresh_from_db(fields=["booster_count"])
+
+    return 200, {
+        "cards": [
+            {
+                "name": c.name,
+                "card_id": c.card_id,
+                "image": c.image,
+                "category": c.category or "",
+                "rarity": c.rarity or "",
+                "illustrator": c.illustrator or "",
+            }
+            for c in pulled
+        ],
+        "booster_count": user.booster_count,
+    }
 
 @api.get('user/pagination', response={200: list[CardsOut], 404: ErrorOut, 500: TokenOut})
 @paginate
-def pagination(request): 
+def pagination(request):
         return Card.objects.all()
 
 
@@ -253,5 +263,5 @@ def pagination(request):
 def get_cards(request, types: Optional[str] = None):
     cards = Card.objects.all()
     if types:
-        cards = cards.filter(types__icontains=types)  
+        cards = cards.filter(types__icontains=types)
     return cards
