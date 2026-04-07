@@ -65,6 +65,28 @@ CORS_ALLOWED_ORIGINS = [
     "http://localhost:8081",
     "https://pokecardmasters.lebaron.sh",
 ]
+
+CSRF_TRUSTED_ORIGINS = [
+    "https://pokecardmasters.lebaron.sh",
+]
+
+CORS_ALLOW_METHODS = [
+    "DELETE",
+    "GET",
+    "OPTIONS",
+    "PATCH",
+    "POST",
+    "PUT",
+]
+
+CORS_ALLOW_HEADERS = [
+    "accept",
+    "authorization",
+    "content-type",
+    "origin",
+    "x-csrftoken",
+    "x-requested-with",
+]
 ROOT_URLCONF = "project.urls"
 
 TEMPLATES = [
