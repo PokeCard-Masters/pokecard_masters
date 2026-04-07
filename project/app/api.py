@@ -51,9 +51,9 @@ class PlayerCardSchema(Schema):
     id: int
     name: str
     image: str
-    category: str
-    rarity: str
-    illustrator: str
+    category: str | None
+    rarity: str | None
+    illustrator: str | None
     quantity: int
 
 
