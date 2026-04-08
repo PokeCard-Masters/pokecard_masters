@@ -1,98 +1,287 @@
-import { useState } from "react";
-import { View, Text, TextInput, Pressable, StyleSheet, ActivityIndicator, Platform } from "react-native";
-import { useRouter } from "expo-router";
+import { useState } from 'react';
+import { Animated, Image, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useAuth } from "@/context/AuthContext";
+import { useAuth } from '@/context/AuthContext';
 import { useFonts, PressStart2P_400Regular } from '@expo-google-fonts/press-start-2p';
-import { Image } from 'react-native';
+import { usePokemonLogin } from '@/hooks/usePokemonLogin';
 
-import * as AppleAuthentication from "expo-apple-authentication";
+import Pokeball from '@/components/pokeball';
+import BackgroundCards from '@/components/BackgroundCard';
+import ParticlesBackground from '@/components/ParticlesBackground';
+import LightningOverlay from '@/components/LightOverlay';
+import PasswordStrength from '@/components/PasswordStrenght';
+import StarterPicker from '@/components/StarterPicker';
+import ProfChenQuote from '@/components/Quote';
+import SkeletonLoader from '@/components/SkeletonLoader';
 
-import Pokeball from '@/components/pokeball'
-
+type Tab = 'login' | 'register';
 
 export default function LoginScreen() {
   const { signIn, signInWithPassword, isLoading } = useAuth();
   const router = useRouter();
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
+
+  const [tab, setTab] = useState<Tab>('login');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [username, setUsername] = useState('');
+  const [starter, setStarter] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
   const [fontsLoaded] = useFonts({ PressStart2P_400Regular });
+
+  const {
+    shakeAnim, lightningRef, easterEgg, easterCount,
+    shakePokeball, hapticLight, hapticError, hapticSuccess,
+    playSuccessSound, triggerLightning, checkEasterEgg,
+  } = usePokemonLogin();
+
+  // ── Loading ──
   if (!fontsLoaded || isLoading) {
-    return <ActivityIndicator size="large" />;
+    return (
+      <View style={styles.container}>
+        <LinearGradient colors={['#F5F0DC', '#EEF2F7']} style={StyleSheet.absoluteFill} />
+        <SkeletonLoader />
+      </View>
+    );
   }
 
+  // ── Handlers ──
   const handleLogin = async () => {
     setError(null);
+    triggerLightning();
     if (!email.trim() || !password) {
-      setError("Please enter your email and password.");
+      setError('Remplis tous les champs, dresseur !');
+      shakePokeball();
+      hapticError();
       return;
     }
     setSubmitting(true);
     const err = await signInWithPassword(email.trim(), password);
     setSubmitting(false);
-    if (err) setError(err);
+    if (err) {
+      setError(err);
+      shakePokeball();
+      hapticError();
+    } else {
+      hapticSuccess();
+      await playSuccessSound();
+      // Transition duel : naviguer après un court délai pour laisser le flash s'estomper
+      setTimeout(() => router.replace('/(drawer)/(tabs)/booster'), 400);
+    }
   };
 
+  const handleRegister = async () => {
+    setError(null);
+    triggerLightning();
+    if (!username.trim() || !email.trim() || !password || !starter) {
+      setError(!starter ? 'Choisis ton Pokémon de départ !' : 'Remplis tous les champs !');
+      shakePokeball();
+      hapticError();
+      return;
+    }
+    // TODO: brancher ta logique d'inscription
+  };
+
+  const switchTab = (t: Tab) => {
+    hapticLight();
+    setTab(t);
+    setError(null);
+  };
+
+  // ── Render ──
   return (
     <View style={styles.container}>
       <LinearGradient
-        colors={['#E9F6E9', '#AA99EC']}
+        colors={['#F5F0DC', '#EEF2F7']}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
         style={StyleSheet.absoluteFill}
       />
-      <View style={styles.card}>
-        <View style={{ alignItems: 'center', marginBottom: 16 }}>
-          <Pokeball size={75} />
+
+      <BackgroundCards />
+      <ParticlesBackground />
+      <LightningOverlay ref={lightningRef} />
+
+      {/* Easter egg ⚡ */}
+      {easterEgg && (
+        <View style={styles.easterEgg} pointerEvents="none">
+          <Text style={styles.easterEmoji}>⚡</Text>
+          <Text style={styles.easterText}>PIKA PIKA !</Text>
+          {easterCount > 1 && (
+            <Text style={styles.easterSub}>×{easterCount} fois... sérieusement ?</Text>
+          )}
         </View>
-        <Text style={styles.title}>PokeMasters</Text>
-        <Text>{' '}</Text>
-        <Text style={styles.subtitle}>De retour dans la région ?⚡️</Text>
-        <TextInput
-          style={styles.input}
-          placeholder="Email"
-          placeholderTextColor="#999"
-          autoCapitalize="none"
-          keyboardType="email-address"
-          value={email}
-          onChangeText={setEmail}
-        />
-        <TextInput
-          style={styles.input}
-          placeholder="Mot de passe"
-          placeholderTextColor="#999"
-          secureTextEntry
-          value={password}
-          onChangeText={setPassword}
-        />
-        {error && <Text style={styles.error}>{error}</Text>}
+      )}
 
+      <View style={[styles.card, { zIndex: 2 }]}>
 
-        <Pressable style={styles.loginButton} onPress={handleLogin} disabled={submitting}>
-          <Text style={styles.buttonText}>{submitting ? "Connexion en cours..." : "Se connecter"}</Text>
-        </Pressable>
+        {/* ── Header ── */}
+        <View style={styles.header}>
+          <View style={styles.orbTopRight} />
+          <View style={styles.orbBottomLeft} />
 
-        <Pressable onPress={() => router.push("/(auth)/register")}>
-          <Text style={styles.link}>Prêt à commencer ton aventure, dresseur ?</Text>
-        </Pressable>
-        <View style={styles.divider}>
-          <View style={styles.dividerLine} />
-          <Text style={styles.dividerText}>ou</Text>
-          <View style={styles.dividerLine} />
+          <View style={styles.headerRow}>
+            <Animated.View style={{ transform: [{ translateX: shakeAnim }] }}>
+              <Pokeball size={56} />
+            </Animated.View>
+
+            <View style={styles.headerText}>
+              <Text style={styles.brandName}>PokeMasters</Text>
+              <View style={styles.hpBadge}>
+                <Text style={styles.hpNum}>100</Text>
+                <Text style={styles.hpLabel}> HP</Text>
+              </View>
+            </View>
+          </View>
         </View>
 
-        <Pressable style={styles.googleButton} onPress={signIn}>
-          <Text style={styles.buttonText}>Continuer avec Google
-            <Text>{' '}</Text>
-            <Image
-              source={require('@/asset/google-logo.png')}
-              style={{ width: 24, height: 24 }}
-            />
-          </Text>
-        </Pressable>
+        {/* ── Bande dorée ── */}
+        <View style={styles.stripe} />
+
+        {/* ── Body ── */}
+        <View style={styles.body}>
+
+          {/* Tabs */}
+          <View style={styles.tabPills}>
+            <Pressable
+              style={[styles.tabPill, tab === 'login' && styles.tabPillActive]}
+              onPress={() => switchTab('login')}
+            >
+              <Text style={[styles.tabText, tab === 'login' && styles.tabTextActive]}>
+                ⚡ Connexion
+              </Text>
+            </Pressable>
+            <Pressable
+              style={[styles.tabPill, tab === 'register' && styles.tabPillActive]}
+              onPress={() => switchTab('register')}
+            >
+              <Text style={[styles.tabText, tab === 'register' && styles.tabTextActive]}>
+                🌟 Inscription
+              </Text>
+            </Pressable>
+          </View>
+
+          {/* Citation Prof Chen */}
+          <ProfChenQuote />
+
+          {/* Erreur */}
+          {error && (
+            <View style={styles.errorBox}>
+              <Text style={styles.errorText}>⚠️ {error}</Text>
+            </View>
+          )}
+
+          {/* ── Connexion ── */}
+          {tab === 'login' && (
+            <>
+              <Text style={styles.sectionLabel}>Attaque — Identification</Text>
+
+              <TextInput
+                style={styles.input}
+                placeholder="ash@pallet.town"
+                placeholderTextColor="#bbb"
+                autoCapitalize="none"
+                keyboardType="email-address"
+                value={email}
+                onChangeText={text => { setEmail(text); checkEasterEgg(text); }}
+              />
+              <TextInput
+                style={styles.input}
+                placeholder="Mot de passe secret"
+                placeholderTextColor="#bbb"
+                secureTextEntry
+                value={password}
+                onChangeText={setPassword}
+              />
+
+              <Pressable
+                style={styles.btnPrimary}
+                onPress={handleLogin}
+                disabled={submitting}
+              >
+                <Text style={styles.btnPrimaryText}>
+                  {submitting ? '⏳ Connexion...' : '⚡ Se connecter'}
+                </Text>
+              </Pressable>
+
+              <Pressable onPress={() => switchTab('register')}>
+                <Text style={styles.link}>Première aventure ? S'inscrire →</Text>
+              </Pressable>
+
+              <View style={styles.divider}>
+                <View style={styles.dividerLine} />
+                <Text style={styles.dividerText}>ou</Text>
+                <View style={styles.dividerLine} />
+              </View>
+
+              <Pressable style={styles.btnGoogle} onPress={() => { hapticLight(); signIn(); }}>
+                <Image source={require('@/asset/google-logo.png')} style={styles.googleLogo} />
+                <Text style={styles.btnGoogleText}>Continuer avec Google</Text>
+              </Pressable>
+            </>
+          )}
+
+          {/* ── Inscription ── */}
+          {tab === 'register' && (
+            <>
+              <Text style={styles.sectionLabel}>Nouvelle Aventure</Text>
+
+              <StarterPicker value={starter} onChange={setStarter} />
+
+              <TextInput
+                style={styles.input}
+                placeholder="Nom de dresseur"
+                placeholderTextColor="#bbb"
+                value={username}
+                onChangeText={setUsername}
+              />
+              <TextInput
+                style={styles.input}
+                placeholder="ash@pallet.town"
+                placeholderTextColor="#bbb"
+                autoCapitalize="none"
+                keyboardType="email-address"
+                value={email}
+                onChangeText={setEmail}
+              />
+              <TextInput
+                style={styles.input}
+                placeholder="Mot de passe secret"
+                placeholderTextColor="#bbb"
+                secureTextEntry
+                value={password}
+                onChangeText={setPassword}
+              />
+              <PasswordStrength password={password} />
+
+              <Pressable
+                style={styles.btnPrimary}
+                onPress={handleRegister}
+                disabled={submitting}
+              >
+                <Text style={styles.btnPrimaryText}>
+                  {submitting ? '⏳ Inscription...' : "🚀 Commencer l'aventure"}
+                </Text>
+              </Pressable>
+
+              <Pressable onPress={() => switchTab('login')}>
+                <Text style={styles.link}>← Déjà dresseur ? Se connecter</Text>
+              </Pressable>
+            </>
+          )}
+
+        </View>
+
+        {/* ── Footer ── */}
+        <View style={styles.footer}>
+          <Text style={styles.footerText}>Niveau 1 · Région de Kanto</Text>
+          <View style={styles.typeBadge}>
+            <Text style={styles.typeBadgeText}>⚡ Électrik</Text>
+          </View>
+        </View>
+
       </View>
     </View>
   );
@@ -101,138 +290,164 @@ export default function LoginScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
+    justifyContent: 'center',
+    alignItems: 'center',
     padding: 20,
-    backgroundColor: '#654DC4',
   },
-  background: {
+
+  // ── Easter egg ──
+  easterEgg: {
     position: 'absolute',
-    left: 0,
-    right: 0,
-    top: 0,
-    height: 0,
-  },
-  card: {
-    width: "100%",
-    maxWidth: 520,
-    backgroundColor: "#fff",
-    borderRadius: 24,
-    padding: 40,
-    shadowColor: "#000",
-    shadowOffset: { width: 25, height: 25 },
+    top: '20%',
+    alignSelf: 'center',
+    alignItems: 'center',
+    zIndex: 100,
+    backgroundColor: 'rgba(255,203,5,0.95)',
+    borderRadius: 16,
+    paddingHorizontal: 24,
+    paddingVertical: 16,
+    gap: 4,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.2,
-    shadowRadius: 6,
+    shadowRadius: 12,
     elevation: 10,
   },
-  title: {
-    fontSize: 28,
-    fontStyle: 'normal',
+  easterEmoji: { fontSize: 36 },
+  easterText: {
     fontFamily: 'PressStart2P_400Regular',
-    textAlign: 'center',
-  },
-  subtitle: {
-    fontSize: 16,
-    color: "#666",
-    marginBottom: 32,
-    textAlign: 'center',
-
-  },
-  input: {
-    width: "100%",
-    maxWidth: 460,
-    borderWidth: 1,
-    borderColor: "#ccc",
-    borderRadius: 8,
-    padding: 12,
-    fontSize: 16,
-    marginBottom: 12,
-  },
-  error: { color: "#e53e3e", marginBottom: 12, fontSize: 14 },
-  loginButton: {
-    backgroundColor: "#2563eb",
-    paddingHorizontal: 24,
-    paddingVertical: 12,
-    borderRadius: 8,
-    width: "100%",
-    maxWidth: 460,
-    alignItems: "center",
-    marginBottom: 12,
-  },
-  googleButton: {
-    backgroundColor: "#1A211E",
-    paddingHorizontal: 24,
-    paddingVertical: 12,
-    borderRadius: 8,
-    width: "100%",
-    maxWidth: 460,
-    alignItems: "center",
-  },
-  buttonText: {
-    color: "#fff",
-    fontSize: 16,
-    fontWeight: "600",
-  },
-  link: {
-    color: "#2563eb",
     fontSize: 14,
-    marginBottom: 16,
-    textAlign: 'center',
+    color: '#E3350D',
   },
-  divider: {
-    flexDirection: "row",
-    alignItems: "center",
-    width: "100%",
-    maxWidth: 460,
-    marginBottom: 16
+  easterSub: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#C02A09',
   },
-  dividerLine: {
-    flex: 1,
-    height: 1,
-    backgroundColor: "#ccc"
-  },
-  dividerText: {
-    marginHorizontal: 12,
-    color: "#666",
-    fontSize: 14
-  },
-  ball: {
+
+  // ── Carte ──
+  card: {
+    width: '100%',
+    maxWidth: 440,
+    backgroundColor: '#FFFEF8',
+    borderRadius: 20,
     overflow: 'hidden',
-    justifyContent: 'center',
-    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: '#D4A017',
+    shadowColor: '#C8A800',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.25,
+    shadowRadius: 16,
+    elevation: 10,
   },
-  topHalf: {
-    position: 'absolute', top: 0, left: 0, right: 0,
-    height: '50%',
+
+  // ── Header ──
+  header: {
+    backgroundColor: '#E3350D',
+    paddingHorizontal: 28,
+    paddingTop: 28,
+    paddingBottom: 24,
+    overflow: 'hidden',
   },
-  stripe: {
-    position: 'absolute',
-    left: 0, right: 0,
-    backgroundColor: '#111',
-    top: '50%',
-    zIndex: 1,
+  orbTopRight: {
+    position: 'absolute', top: -30, right: -30,
+    width: 120, height: 120, borderRadius: 60,
+    backgroundColor: 'rgba(255,255,255,0.08)',
   },
-  bottomHalf: {
-    position: 'absolute', bottom: 0, left: 0, right: 0,
-    height: '50%',
+  orbBottomLeft: {
+    position: 'absolute', bottom: -40, left: -20,
+    width: 160, height: 160, borderRadius: 80,
+    backgroundColor: 'rgba(0,0,0,0.06)',
   },
-  btnOuter: {
-    position: 'absolute',
-    justifyContent: 'center',
-    alignItems: 'center',
-    zIndex: 2,
-    backgroundColor: '#fff',
+  headerRow: { flexDirection: 'row', alignItems: 'center', gap: 16, zIndex: 1 },
+  headerText: { flex: 1, gap: 8 },
+  brandName: {
+    fontFamily: 'PressStart2P_400Regular',
+    fontSize: 15, color: '#FFCB05', letterSpacing: 0.5,
   },
-  btnInner: {
+  hpBadge: {
+    flexDirection: 'row', alignItems: 'baseline', alignSelf: 'flex-start',
+    backgroundColor: 'rgba(0,0,0,0.15)', borderRadius: 20,
+    paddingHorizontal: 10, paddingVertical: 3,
   },
-  pokeball: {
-    alignContent: 'center',
-    marginBottom: 24,
+  hpNum: { fontFamily: 'PressStart2P_400Regular', fontSize: 13, color: '#fff' },
+  hpLabel: { fontFamily: 'PressStart2P_400Regular', fontSize: 7, color: 'rgba(255,255,255,0.6)', letterSpacing: 1 },
+
+  // ── Bande ──
+  stripe: { height: 6, backgroundColor: '#FFCB05' },
+
+  // ── Body ──
+  body: { padding: 28 },
+
+  tabPills: {
+    flexDirection: 'row', backgroundColor: '#F0EDE0',
+    borderRadius: 10, padding: 4, marginBottom: 20,
+    borderWidth: 1.5, borderColor: '#D4C080',
   },
-  buttonApple: {
-    color: "#fff",
-    fontSize: 16,
-    fontWeight: "600",
-    height: 44,
-  }
-})
+  tabPill: { flex: 1, alignItems: 'center', paddingVertical: 9, borderRadius: 7 },
+  tabPillActive: {
+    backgroundColor: '#E3350D',
+    shadowColor: '#E3350D', shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.35, shadowRadius: 6, elevation: 4,
+  },
+  tabText: { fontFamily: 'PressStart2P_400Regular', fontSize: 7.5, color: '#999' },
+  tabTextActive: { color: '#FFCB05' },
+
+  errorBox: { backgroundColor: '#FFF0EE', borderWidth: 1.5, borderColor: '#E3350D', borderRadius: 8, padding: 10, marginBottom: 14 },
+  errorText: { color: '#C02A09', fontSize: 12, fontWeight: '800' },
+
+  sectionLabel: {
+    fontFamily: 'PressStart2P_400Regular',
+    fontSize: 8, color: '#3B4CCA',
+    letterSpacing: 1.5, marginBottom: 14,
+  },
+
+  input: {
+    backgroundColor: '#FAFAF2', borderWidth: 2, borderColor: '#DDD9C0',
+    borderRadius: 10, padding: 13, fontSize: 14,
+    fontWeight: '700', color: '#222', marginBottom: 12,
+  },
+
+  btnPrimary: {
+    backgroundColor: '#E3350D', borderRadius: 12,
+    paddingVertical: 15, alignItems: 'center',
+    marginTop: 4, marginBottom: 14,
+    shadowColor: '#8B1E07',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 1, shadowRadius: 0, elevation: 4,
+  },
+  btnPrimaryText: {
+    fontFamily: 'PressStart2P_400Regular',
+    fontSize: 10, color: '#FFCB05', letterSpacing: 0.3,
+  },
+
+  link: {
+    color: '#3B4CCA', fontSize: 12, fontWeight: '800',
+    textAlign: 'center', marginBottom: 18, textDecorationLine: 'underline',
+  },
+
+  divider: { flexDirection: 'row', alignItems: 'center', marginBottom: 14, gap: 10 },
+  dividerLine: { flex: 1, height: 1.5, backgroundColor: '#E8E3C8', borderRadius: 2 },
+  dividerText: { fontFamily: 'PressStart2P_400Regular', fontSize: 7, color: '#bbb' },
+
+  btnGoogle: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+    gap: 10, backgroundColor: '#fff', borderWidth: 2, borderColor: '#DDD9C0',
+    borderRadius: 10, paddingVertical: 13,
+    shadowColor: '#DDD9C0', shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 1, shadowRadius: 0, elevation: 2,
+  },
+  googleLogo: { width: 20, height: 20 },
+  btnGoogleText: { fontSize: 14, fontWeight: '800', color: '#333' },
+
+  // ── Footer ──
+  footer: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    backgroundColor: '#F0EDE0', borderTopWidth: 1.5, borderTopColor: '#DDD9C0',
+    paddingHorizontal: 28, paddingVertical: 10,
+  },
+  footerText: { fontFamily: 'PressStart2P_400Regular', fontSize: 7, color: '#aaa' },
+  typeBadge: { backgroundColor: '#3B4CCA', borderRadius: 20, paddingHorizontal: 10, paddingVertical: 4 },
+  typeBadgeText: { fontFamily: 'PressStart2P_400Regular', fontSize: 7, color: '#fff' },
+});
+

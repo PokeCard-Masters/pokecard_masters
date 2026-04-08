@@ -5,6 +5,8 @@ import { useEffect } from "react";
 import "react-native-reanimated";
 import { useColorScheme } from "react-native";
 import { AuthProvider, useAuth } from "@/context/AuthContext";
+import { Text } from 'react-native';
+import '../global.css';
 
 function RootNavigator() {
   const { token, isLoading } = useAuth();
@@ -25,6 +27,7 @@ function RootNavigator() {
 
   return (
     <Stack>
+      <Text className="text-xl font-bold text-blue-500">NativeWind ✅</Text>
       <Stack.Screen
         name="(auth)"
         options={{ headerShown: false }}

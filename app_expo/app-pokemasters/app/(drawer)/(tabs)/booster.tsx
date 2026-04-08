@@ -13,7 +13,7 @@ import {
 } from 'react-native';
 import { useAuth } from '@/context/AuthContext';
 import { apiFetch } from '@/services/api';
-import { Int32 } from 'react-native/Libraries/Types/CodegenTypes';
+
 
 interface Card {
   name: string;
@@ -91,6 +91,9 @@ const PokemonBoosterOpener = () => {
               <View style={styles.pokeballCenter} />
             </View>
             <Text style={styles.title}>Pokémon TCG</Text>
+            <Text className="text-xl font-bold text-blue-500">
+        Welcome to Nativewind!
+      </Text>
           </View>
           <Text style={styles.subtitle}>BOOSTER OPENER · VAULT DU DRESSEUR</Text>
         </View>
