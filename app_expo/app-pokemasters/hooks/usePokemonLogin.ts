@@ -30,23 +30,33 @@ export function usePokemonLogin() {
   const hapticSuccess = () => Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
   const hapticError   = () => Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
 
-  // ── Son au login réussi (optionnel, silencieux si fichier absent) ──
+  // ── Son au login réussi ──
   const playSuccessSound = async () => {
     try {
       const { Audio } = await import('expo-av');
       const { sound } = await Audio.Sound.createAsync(
-        require('@/assets/sounds/pokemon_catch.mp3'),
+        require('@/asset/eclair.m4a'),
         { shouldPlay: true, volume: 0.4 }
       );
+
       sound.setOnPlaybackStatusUpdate(status => {
-        if (status.isLoaded && status.didJustFinish) sound.unloadAsync();
+        if (status.isLoaded && status.didJustFinish) {
+          sound.unloadAsync();
+        }
       });
     } catch {
-      // silencieux si expo-av absent ou fichier manquant
+      // silencieux si problème
     }
   };
 
-  // ── Éclair au submit ──
+  // ── Éclair + son + haptique (SUCCESS GLOBAL) ──
+  const triggerSuccess = () => {
+    lightningRef.current?.flash(); // ⚡ animation
+    hapticSuccess();               // 📳 vibration succès
+    playSuccessSound();            // 🔊 cri Pikachu
+  };
+
+  // ── Éclair simple (sans son) ──
   const triggerLightning = () => {
     lightningRef.current?.flash();
     hapticMedium();
@@ -57,7 +67,8 @@ export function usePokemonLogin() {
     if (text.toUpperCase() === EASTER_EGG_WORD) {
       setEasterEgg(true);
       setEasterCount(c => c + 1);
-      hapticSuccess();
+      triggerSuccess(); // 🔥 utilise le combo complet
+
       setTimeout(() => setEasterEgg(false), 3000);
     }
   };
@@ -74,6 +85,7 @@ export function usePokemonLogin() {
     hapticError,
     playSuccessSound,
     triggerLightning,
+    triggerSuccess, // 👈 nouvelle fonction clé
     checkEasterEgg,
   };
 }

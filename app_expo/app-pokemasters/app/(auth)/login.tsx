@@ -37,7 +37,6 @@ export default function LoginScreen() {
     playSuccessSound, triggerLightning, checkEasterEgg,
   } = usePokemonLogin();
 
-  // ── Loading ──
   if (!fontsLoaded || isLoading) {
     return (
       <View style={styles.container}>
@@ -47,7 +46,6 @@ export default function LoginScreen() {
     );
   }
 
-  // ── Handlers ──
   const handleLogin = async () => {
     setError(null);
     triggerLightning();
@@ -67,7 +65,6 @@ export default function LoginScreen() {
     } else {
       hapticSuccess();
       await playSuccessSound();
-      // Transition duel : naviguer après un court délai pour laisser le flash s'estomper
       setTimeout(() => router.replace('/(drawer)/(tabs)/booster'), 400);
     }
   };
@@ -90,7 +87,6 @@ export default function LoginScreen() {
     setError(null);
   };
 
-  // ── Render ──
   return (
     <View style={styles.container}>
       <LinearGradient
