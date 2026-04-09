@@ -91,9 +91,6 @@ const PokemonBoosterOpener = () => {
               <View style={styles.pokeballCenter} />
             </View>
             <Text style={styles.title}>Pokémon TCG</Text>
-            <Text className="text-xl font-bold text-blue-500">
-        Welcome to Nativewind!
-      </Text>
           </View>
           <Text style={styles.subtitle}>BOOSTER OPENER · VAULT DU DRESSEUR</Text>
         </View>

@@ -1,7 +1,7 @@
 import * as Haptics from 'expo-haptics';
 import { useRef, useState } from 'react';
 import { Animated } from 'react-native';
-import { LightningRef } from '@/components/LightOverlay';
+import { LightningRef } from '@/components/login_components/LightOverlay';
 
 const EASTER_EGG_WORD = 'PIKACHU';
 

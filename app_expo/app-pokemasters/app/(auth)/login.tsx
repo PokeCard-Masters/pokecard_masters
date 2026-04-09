@@ -6,14 +6,14 @@ import { useAuth } from '@/context/AuthContext';
 import { useFonts, PressStart2P_400Regular } from '@expo-google-fonts/press-start-2p';
 import { usePokemonLogin } from '@/hooks/usePokemonLogin';
 
-import Pokeball from '@/components/pokeball';
-import BackgroundCards from '@/components/BackgroundCard';
-import ParticlesBackground from '@/components/ParticlesBackground';
-import LightningOverlay from '@/components/LightOverlay';
-import PasswordStrength from '@/components/PasswordStrenght';
-import StarterPicker from '@/components/StarterPicker';
-import ProfChenQuote from '@/components/Quote';
-import SkeletonLoader from '@/components/SkeletonLoader';
+import Pokeball from '@/components/login_components/pokeball';
+import BackgroundCards from '@/components/login_components/BackgroundCard';
+import ParticlesBackground from '@/components/login_components/ParticlesBackground';
+import LightningOverlay from '@/components/login_components/LightOverlay';
+import PasswordStrength from '@/components/login_components/PasswordStrenght';
+import StarterPicker from '@/components/login_components/StarterPicker';
+import ProfChenQuote from '@/components/login_components/Quote';
+import SkeletonLoader from '@/components/login_components/SkeletonLoader';
 
 type Tab = 'login' | 'register';
 
