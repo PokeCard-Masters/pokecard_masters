@@ -21,46 +21,48 @@ def import_list(request):
     return JsonResponse({"success": pokemon_list})
 
 
-def import_api(request):
-    r = requests.get("https://api.tcgdex.net/v2/en/cards")
+def import_set_A4(request):
+    r = requests.get("https://api.tcgdex.net/v2/en/sets/A4")
     r_json = r.json()
+    cards = r_json["cards"]
     number = 0
-    for i in r_json:
-        if "image" in i:
-            card_id = i["id"]
-            name = i["name"]
-            image = i["image"]
-            r_card = requests.get(f"https://api.tcgdex.net/v2/en/cards/{card_id}")
-            r_card_json = r_card.json()
-            category = r_card_json["category"]
-            illustrator = None
-            types = r_card_json.get("types")
-            evolution = r_card_json.get("stage", "") 
-            description = r_card_json.get("description")
-            evolve_from = r_card_json.get("evolveFrom")
+    for i in cards:
+        card_id = i["id"]
+        r_card = requests.get(f"https://api.tcgdex.net/v2/en/cards/{card_id}")
+        r_card_json = r_card.json()
+        name = r_card_json["name"]
+        image = r_card_json["image"]
+        category = r_card_json["category"]
+        illustrator = None
+        types = r_card_json.get("types")
+        evolution = r_card_json.get("stage", "")
+        description = r_card_json.get("description")
+        evolve_from = r_card_json.get("evolveFrom")
+        hp = None
 
-            if "illustrator" in r_card_json:
-                illustrator = r_card_json["illustrator"]
-            rarity = r_card_json["rarity"]
-            if number < 20000:
-                new_pokemon = Card(
-                    card_id=card_id,
-                    name=name,
-                    image=image,
-                    category=category,
-                    illustrator=illustrator,
-                    rarity=rarity,
-                    types=types,
-                    evolution=evolution,
-                    description=description,
-                    evolve_from=evolve_from
-                )
-                new_pokemon.save()
-                number = number + 1
-            else:
-                break
+        if "hp" in r_card_json:
+            hp = r_card_json["hp"]
+        if "illustrator" in r_card_json:
+            illustrator = r_card_json["illustrator"]
+        rarity = r_card_json["rarity"]
+        if number < 250:
+            new_pokemon = Card(
+                card_id=card_id,
+                name=name,
+                image=image,
+                category=category,
+                illustrator=illustrator,
+                rarity=rarity,
+                types=types,
+                evolution=evolution,
+                description=description,
+                evolve_from=evolve_from,
+                hp=hp,
+            )
+            new_pokemon.save()
+            number = number + 1
         else:
-            print(f"{i['name']} does not have image")
+            break
     return JsonResponse({"success": "ok"})
 
 

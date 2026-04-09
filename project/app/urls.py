@@ -5,6 +5,6 @@ from .api import api
 urlpatterns = [
     path("api/pokemon/", views.import_list, name="pokemon_list"),
     path("card/", views.card, name="card"),
-    path("import/", views.import_api, name="import_api"),
+    path("import/", views.import_set_A4, name="import_api"),
     path("api/", api.urls),
 ]
