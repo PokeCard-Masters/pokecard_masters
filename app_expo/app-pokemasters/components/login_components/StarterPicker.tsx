@@ -1,9 +1,9 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 const STARTERS = [
-  { id: 'bulbasaur',  name: 'Bulbizarre', emoji: '🌿', color: '#5BAD57', bg: '#EAF5E9' },
-  { id: 'charmander', name: 'Salamèche',  emoji: '🔥', color: '#E3350D', bg: '#FFF0EE' },
-  { id: 'squirtle',   name: 'Carapuce',   emoji: '💧', color: '#4A90D9', bg: '#EEF5FF' },
+  { id: 'bulbasaur', name: 'Bulbizarre', emoji: '🌿', color: '#5BAD57', bg: '#EAF5E9' },
+  { id: 'charmander', name: 'Salamèche', emoji: '🔥', color: '#E3350D', bg: '#FFF0EE' },
+  { id: 'squirtle', name: 'Carapuce', emoji: '💧', color: '#4A90D9', bg: '#EEF5FF' },
 ];
 
 type Starter = typeof STARTERS[0]['id'];

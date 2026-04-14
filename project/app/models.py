@@ -19,6 +19,7 @@ class User(models.Model):
     id = models.AutoField(primary_key=True)
     user_id = models.CharField(max_length=100)
     name = models.CharField(max_length=200)
+    pseudo = models.CharField(max_length=50, null=True)
     password = models.CharField(max_length=128, blank=True, default="")
     email = models.EmailField(max_length=200, unique=True)
     last_booster_opened = models.DateField(null=True, blank=True)

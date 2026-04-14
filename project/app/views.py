@@ -3,7 +3,6 @@ from django.http import JsonResponse
 import requests
 from .models import Card
 
-
 def import_list(request):
     result = Card.objects.all()
     pokemon_list = []

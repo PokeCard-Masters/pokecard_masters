@@ -1,18 +1,11 @@
+import { ActivityIndicator, FlatList, Image, Pressable, StatusBar, Text, TextInput, View } from 'react-native';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import {
-  ActivityIndicator,
-  FlatList,
-  Image,
-  Pressable,
-  StatusBar,
-  Text,
-  TextInput,
-  View,
-} from 'react-native';
 import { useAuth } from '@/context/AuthContext';
-import { apiFetch } from '@/services/api';
 import { API_BASE_URL } from '@/config/auth';
 
+// ─────────────────────────────────────────────
+// Types
+// ─────────────────────────────────────────────
 type Pokemon = {
   id: number;
   name: string;
@@ -28,78 +21,93 @@ type PaginatedResponse = {
   count: number;
 };
 
+type Mode = 'pokedex' | 'collection';
+type FilterKey = 'all' | 'Rare' | 'Ultra Rare' | 'Secret';
+
+// ─────────────────────────────────────────────
+// Constants
+// ─────────────────────────────────────────────
 const PAGE_SIZE = 10;
 
-const RARITY_STYLES: Record<
-  string,
-  { bg: string; border: string; label: string }
-> = {
-  Common: { bg: 'bg-slate-100', border: 'border-slate-200', label: 'Commun' },
-  Uncommon: { bg: 'bg-emerald-100', border: 'border-emerald-200', label: 'Peu commun' },
-  Rare: { bg: 'bg-blue-100', border: 'border-blue-200', label: 'Rare' },
-  'Ultra Rare': { bg: 'bg-amber-100', border: 'border-amber-200', label: 'Ultra rare' },
-  Secret: { bg: 'bg-violet-100', border: 'border-violet-200', label: 'Secret' },
+const RARITY_STYLES: Record<string, { bg: string; border: string; dot: string; label: string }> = {
+  Common:       { bg: 'bg-slate-100',   border: 'border-slate-200',   dot: 'bg-slate-400',   label: 'Commun'     },
+  Uncommon:     { bg: 'bg-emerald-100', border: 'border-emerald-200', dot: 'bg-emerald-400', label: 'Peu commun' },
+  Rare:         { bg: 'bg-blue-100',    border: 'border-blue-200',    dot: 'bg-blue-500',    label: 'Rare'       },
+  'Ultra Rare': { bg: 'bg-amber-100',   border: 'border-amber-200',   dot: 'bg-amber-400',   label: 'Ultra Rare' },
+  Secret:       { bg: 'bg-violet-100',  border: 'border-violet-200',  dot: 'bg-violet-500',  label: 'Secret'     },
 };
 
+const getRarityStyle = (rarity: string | null) =>
+  RARITY_STYLES[rarity ?? 'Common'] ?? RARITY_STYLES.Common;
+
+const FILTERS: { key: FilterKey; label: string; emoji: string }[] = [
+  { key: 'all',        label: 'Tous',       emoji: '📋' },
+  { key: 'Rare',       label: 'Rare',       emoji: '💎' },
+  { key: 'Ultra Rare', label: 'Ultra Rare', emoji: '✨' },
+  { key: 'Secret',     label: 'Secret',     emoji: '🌟' },
+];
+
+// ─────────────────────────────────────────────
+// Component
+// ─────────────────────────────────────────────
 export default function Pokedex() {
   const { token } = useAuth();
-  const [pokemons, setPokemons] = useState<Pokemon[]>([]);
-  const [page, setPage] = useState(1);
-  const [totalCount, setTotalCount] = useState(0);
-  const [loading, setLoading] = useState(false);
-  const [filter, setFilter] = useState<string | null>('pokedex');
-  const [query, setQuery] = useState('');
 
-  const listRef = useRef<FlatList>(null);
+  const [pokemons, setPokemons]         = useState<Pokemon[]>([]);
+  const [page, setPage]                 = useState(1);
+  const [totalCount, setTotalCount]     = useState(0);
+  const [loading, setLoading]           = useState(false);
+  const [error, setError]               = useState<string | null>(null);
+  const [mode, setMode]                 = useState<Mode>('pokedex');
+  const [activeFilter, setActiveFilter] = useState<FilterKey>('all');
+  const [query, setQuery]               = useState('');
 
+  const listRef    = useRef<FlatList>(null);
   const totalPages = Math.max(1, Math.ceil(totalCount / PAGE_SIZE));
 
-  const userStats = useMemo(() => {
-    const rares = pokemons.filter(
-      (p) => p.rarity === 'Rare' || p.rarity === 'Ultra Rare' || p.rarity === 'Secret'
-    ).length;
-
-    return {
-      total: totalCount,
-      rares,
-      collection: pokemons.reduce((acc, p) => acc + p.quantity, 0),
-    };
-  }, [pokemons, totalCount]);
-
-  const fetchPokedex = async (pageToLoad: number) => {
+  // ── Fetch ───────────────────────────────────────────────────────────────
+  // 🐛 FIX #1 : renommé `data` pour ne plus écraser le type `PaginatedResponse`
+  // 🐛 FIX #2 : le mode change l'endpoint appelé
+  // 🐛 FIX #3 : le filtre rareté est envoyé au serveur via query param
+  const fetchPokedex = async (pageToLoad: number, currentMode: Mode, rarity: FilterKey) => {
     setLoading(true);
+    setError(null);
     try {
-      const response = await fetch(
-        `${API_BASE_URL}/api/user/pagination?page=${pageToLoad}&limit=${PAGE_SIZE}`,
-        {
-          headers: token ? { Authorization: `Bearer ${token}` } : {},
-        }
-      );
+      const endpoint = currentMode === 'collection'
+        ? '/api/user/collection/pagination'   // ← adapte selon ton backend
+        : '/api/user/pagination';
 
-      if (!response.ok) {
-        throw new Error(`Erreur HTTP ${response.status}`);
-      }
+      const rarityParam = rarity !== 'all' ? `&rarity=${encodeURIComponent(rarity)}` : '';
+      const url = `${API_BASE_URL}${endpoint}?page=${pageToLoad}&limit=${PAGE_SIZE}${rarityParam}`;
 
-      const  PaginatedResponse = await response.json();
-      setPokemons(PaginatedResponse.items);
-      setTotalCount(PaginatedResponse.count);
-    } catch (error) {
-      console.error('Erreur fetch pokédex:', error);
+      const response = await fetch(url, {
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      });
+
+      if (!response.ok) throw new Error(`Erreur HTTP ${response.status}`);
+
+      // 🐛 FIX #1 : `data` au lieu de `PaginatedResponse` (qui écrasait le type)
+      const data: PaginatedResponse = await response.json();
+      setPokemons(data.items);
+      setTotalCount(data.count);
+    } catch (err: any) {
+      console.error('Type:', err?.name);
+      console.error('Message:', err?.message);
+      setError('Impossible de charger le Pokédex. Vérifie ta connexion.');
     } finally {
       setLoading(false);
     }
   };
 
+  // Re-fetch à chaque changement de page, mode ou filtre
   useEffect(() => {
-    if (filter === 'pokedex') {
-      fetchPokedex(page);
-    }
-  }, [page, filter]);
+    fetchPokedex(page, mode, activeFilter);
+  }, [page, mode, activeFilter]);
 
+  // ── Recherche locale sur la page courante ────────────────────────────────
   const visiblePokemons = useMemo(() => {
     const normalized = query.trim().toLowerCase();
     if (!normalized) return pokemons;
-
     return pokemons.filter((p) =>
       `${p.id} ${p.name} ${p.category ?? ''} ${p.rarity ?? ''}`
         .toLowerCase()
@@ -107,45 +115,64 @@ export default function Pokedex() {
     );
   }, [pokemons, query]);
 
+  // ── Stats ────────────────────────────────────────────────────────────────
+  const rarityCount = useMemo(
+    () => pokemons.filter((p) =>
+      p.rarity === 'Rare' || p.rarity === 'Ultra Rare' || p.rarity === 'Secret'
+    ).length,
+    [pokemons]
+  );
+
+  const totalOwned = useMemo(
+    () => pokemons.reduce((acc, p) => acc + p.quantity, 0),
+    [pokemons]
+  );
+
+  // ── Navigation ───────────────────────────────────────────────────────────
   const goToPage = (newPage: number) => {
     if (newPage < 1 || newPage > totalPages || loading) return;
     setPage(newPage);
     listRef.current?.scrollToOffset({ offset: 0, animated: true });
   };
 
-  const filters = [
-    { key: 'pokedex', label: 'Tous' },
-    { key: 'rares', label: 'Rares' },
-    { key: 'ultra', label: 'Ultra' },
-    { key: 'secret', label: 'Secret' },
-  ];
+  const handleModeChange = (newMode: Mode) => {
+    setMode(newMode);
+    setPage(1);
+    setActiveFilter('all');
+    setQuery('');
+  };
 
-  const displayList =
-    filter === 'pokedex'
-      ? visiblePokemons
-      : pokemons.filter((p) => {
-          if (filter === 'rares') return p.rarity === 'Rare';
-          if (filter === 'ultra') return p.rarity === 'Ultra Rare';
-          if (filter === 'secret') return p.rarity === 'Secret';
-          return true;
-        });
+  const handleFilterChange = (key: FilterKey) => {
+    setActiveFilter(key);
+    setPage(1);
+    setQuery('');
+  };
 
+  // ─────────────────────────────────────────────
+  // Render helpers
+  // ─────────────────────────────────────────────
   const renderPokemon = ({ item }: { item: Pokemon }) => {
-    const rarityStyle = item.rarity ? RARITY_STYLES[item.rarity] ?? RARITY_STYLES.Common : RARITY_STYLES.Common;
+    const style = getRarityStyle(item.rarity);
 
     return (
-      <Pressable className={`flex-1 rounded-3xl border ${rarityStyle.border} bg-white p-3 shadow-sm active:scale-[0.98]`}>
+      <Pressable
+        className={`flex-1 rounded-3xl border-2 ${style.border} bg-white p-3 shadow-sm active:opacity-80`}
+        style={{ elevation: 2 }}
+      >
+        {/* Header */}
         <View className="mb-2 flex-row items-center justify-between">
           <Text className="text-xs font-bold text-slate-400">
             #{String(item.id).padStart(3, '0')}
           </Text>
-          <View className={`rounded-full px-2 py-1 ${rarityStyle.bg}`}>
-            <Text className="text-[10px] font-semibold text-slate-700">
+          <View className={`flex-row items-center gap-1 rounded-full px-2 py-1 ${style.bg}`}>
+            <View className={`h-1.5 w-1.5 rounded-full ${style.dot}`} />
+            <Text className="text-[10px] font-bold text-slate-700">
               {item.rarity ?? 'Common'}
             </Text>
           </View>
         </View>
 
+        {/* Image */}
         <View className="items-center">
           <View className="h-24 w-24 items-center justify-center rounded-2xl bg-[#F5F0DC]">
             <Image
@@ -156,143 +183,208 @@ export default function Pokedex() {
           </View>
         </View>
 
-        <Text className="mt-3 text-base font-extrabold text-slate-900" numberOfLines={1}>
+        {/* Nom */}
+        <Text className="mt-3 text-sm font-extrabold text-slate-900" numberOfLines={1}>
           {item.name}
         </Text>
 
-        <Text className="mt-1 text-xs text-slate-500" numberOfLines={1}>
+        {/* Catégorie */}
+        <Text className="mt-0.5 text-[11px] text-slate-400" numberOfLines={1}>
           {item.category ?? 'Pokémon'}
         </Text>
 
-        <View className="mt-3 flex-row items-center justify-between">
-          <Text className="text-xs font-semibold text-slate-500">Qté</Text>
-          <Text className="text-sm font-extrabold text-[#C02A09]">{item.quantity}</Text>
+        {/* Quantité */}
+        <View className="mt-3 flex-row items-center justify-between rounded-xl bg-[#FFF8E6] px-2 py-1">
+          <Text className="text-[11px] font-semibold text-slate-500">Quantité</Text>
+          <Text className="text-sm font-black text-[#C02A09]">×{item.quantity}</Text>
         </View>
       </Pressable>
     );
   };
 
+  const renderHeader = () => (
+    <View className="mb-4">
+
+      {/* ── Hero card ── */}
+      <View className="rounded-[28px] border border-[#E8E3C8] bg-white p-5 shadow-sm">
+        <View className="flex-row items-center justify-between">
+          <View>
+            <Text className="text-[11px] font-black uppercase tracking-widest text-[#C02A09]">
+              Pokédex
+            </Text>
+            <Text className="mt-0.5 text-2xl font-black text-slate-900">
+              {mode === 'pokedex' ? 'Tous les Pokémon' : 'Ma collection'}
+            </Text>
+          </View>
+          <View className="h-14 w-14 items-center justify-center rounded-full bg-[#FFCB05]">
+            <Text className="text-2xl">⚡</Text>
+          </View>
+        </View>
+
+        {/* Stats */}
+        <View className="mt-4 flex-row gap-3">
+          {[
+            { label: 'Total',     value: totalCount  },
+            { label: 'Rares +',   value: rarityCount },
+            { label: 'Possédées', value: totalOwned  },
+          ].map(({ label, value }) => (
+            <View key={label} className="flex-1 items-center rounded-2xl bg-[#F5F0DC] py-3">
+              <Text className="text-lg font-black text-slate-900">{value}</Text>
+              <Text className="mt-0.5 text-[10px] font-semibold text-slate-500">{label}</Text>
+            </View>
+          ))}
+        </View>
+
+        {/* Search */}
+        <View className="mt-4 flex-row items-center rounded-2xl border border-[#E8E3C8] bg-[#FAFAF7] px-4 py-3">
+          <Text className="mr-2 text-slate-400">🔍</Text>
+          <TextInput
+            value={query}
+            onChangeText={setQuery}
+            placeholder="Rechercher un Pokémon..."
+            placeholderTextColor="#9CA3AF"
+            className="flex-1 text-sm text-slate-900"
+          />
+          {query.length > 0 && (
+            <Pressable onPress={() => setQuery('')}>
+              <Text className="text-slate-400">✕</Text>
+            </Pressable>
+          )}
+        </View>
+      </View>
+
+      {/* ── Toggle Pokédex / Ma collection ── */}
+      <View className="mt-4 flex-row items-center rounded-2xl border border-[#E8E3C8] bg-white p-1.5">
+        {(['pokedex', 'collection'] as Mode[]).map((m) => (
+          <Pressable
+            key={m}
+            onPress={() => handleModeChange(m)}
+            className={`flex-1 items-center rounded-xl py-2.5 ${
+              mode === m ? 'bg-[#C02A09]' : ''
+            }`}
+            style={{ elevation: mode === m ? 2 : 0 }}
+          >
+            <Text className={`text-sm font-bold ${mode === m ? 'text-white' : 'text-slate-600'}`}>
+              {m === 'pokedex' ? '📖 Pokédex' : '⭐ Ma collection'}
+            </Text>
+          </Pressable>
+        ))}
+      </View>
+
+      {/* ── Filtres rareté ── */}
+      <View className="mt-4">
+        <FlatList
+          data={FILTERS}
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          keyExtractor={(item) => item.key}
+          contentContainerStyle={{ gap: 8 }}
+          renderItem={({ item }) => {
+            const active = activeFilter === item.key;
+            return (
+              <Pressable
+                onPress={() => handleFilterChange(item.key)}
+                className={`flex-row items-center gap-1.5 rounded-full px-4 py-2.5 ${
+                  active ? 'bg-[#C02A09]' : 'border border-[#E8E3C8] bg-white'
+                }`}
+                style={{ elevation: active ? 3 : 1 }}
+              >
+                <Text className="text-sm">{item.emoji}</Text>
+                <Text className={`text-sm font-bold ${active ? 'text-white' : 'text-slate-700'}`}>
+                  {item.label}
+                </Text>
+              </Pressable>
+            );
+          }}
+        />
+      </View>
+    </View>
+  );
+
+  const renderEmpty = () => {
+    if (loading) return (
+      <View className="mt-16 items-center">
+        <ActivityIndicator size="large" color="#C02A09" />
+        <Text className="mt-4 text-sm font-semibold text-slate-600">Chargement…</Text>
+      </View>
+    );
+
+    if (error) return (
+      <View className="mt-16 items-center rounded-3xl border border-red-100 bg-red-50 p-6">
+        <Text className="text-2xl">⚠️</Text>
+        <Text className="mt-2 text-base font-bold text-red-700">Erreur de chargement</Text>
+        <Text className="mt-1 text-center text-sm text-red-500">{error}</Text>
+        <Pressable
+          onPress={() => fetchPokedex(page, mode, activeFilter)}
+          className="mt-4 rounded-2xl bg-[#C02A09] px-6 py-3"
+        >
+          <Text className="font-bold text-white">Réessayer</Text>
+        </Pressable>
+      </View>
+    );
+
+    return (
+      <View className="mt-16 items-center rounded-3xl bg-white/70 p-6">
+        <Text className="text-3xl">😴</Text>
+        <Text className="mt-2 text-base font-bold text-slate-900">Aucun Pokémon trouvé</Text>
+        <Text className="mt-1 text-center text-sm text-slate-500">
+          Essaie un autre filtre ou une autre recherche.
+        </Text>
+      </View>
+    );
+  };
+
+  const renderFooter = () => (
+    <View className="mt-6">
+      <View className="flex-row items-center justify-between rounded-3xl border border-[#E8E3C8] bg-white/80 px-4 py-3">
+        <Pressable
+          onPress={() => goToPage(page - 1)}
+          disabled={page === 1 || loading}
+          className={`rounded-2xl px-5 py-3 ${page === 1 || loading ? 'bg-slate-100' : 'bg-[#FFCB05]'}`}
+        >
+          <Text className={`font-bold ${page === 1 || loading ? 'text-slate-400' : 'text-slate-900'}`}>
+            ← Préc.
+          </Text>
+        </Pressable>
+
+        <View className="items-center">
+          <Text className="text-sm font-black text-slate-700">{page} / {totalPages}</Text>
+          <Text className="text-[10px] text-slate-400">{totalCount} cartes</Text>
+        </View>
+
+        <Pressable
+          onPress={() => goToPage(page + 1)}
+          disabled={page === totalPages || loading}
+          className={`rounded-2xl px-5 py-3 ${page === totalPages || loading ? 'bg-slate-100' : 'bg-[#FFCB05]'}`}
+        >
+          <Text className={`font-bold ${page === totalPages || loading ? 'text-slate-400' : 'text-slate-900'}`}>
+            Suiv. →
+          </Text>
+        </Pressable>
+      </View>
+    </View>
+  );
+
+  // ─────────────────────────────────────────────
+  // Render
+  // ─────────────────────────────────────────────
   return (
     <View className="flex-1 bg-[#F5F0DC]">
       <StatusBar barStyle="dark-content" />
 
       <FlatList
         ref={listRef}
-        data={displayList}
+        data={visiblePokemons}
         keyExtractor={(item) => item.id.toString()}
         numColumns={2}
         columnWrapperStyle={{ gap: 12 }}
-        contentContainerStyle={{ padding: 16, paddingBottom: 32 }}
+        contentContainerStyle={{ padding: 16, paddingBottom: 40 }}
         ItemSeparatorComponent={() => <View className="h-3" />}
-        ListHeaderComponent={
-          <View className="mb-4">
-            <View className="rounded-[32px] border border-[#E8E3C8] bg-white/80 p-4 shadow-sm">
-              <View className="mb-4 flex-row items-center justify-between">
-                <View>
-                  <Text className="text-xs font-bold uppercase tracking-[2px] text-[#C02A09]">
-                    Pokédex
-                  </Text>
-                  <Text className="mt-1 text-2xl font-black text-slate-900">
-                    Ma collection
-                  </Text>
-                </View>
-
-                <View className="h-14 w-14 items-center justify-center rounded-full bg-[#FFCB05]">
-                  <Text className="text-xl">⚡</Text>
-                </View>
-              </View>
-
-              <View className="mb-4 flex-row gap-3">
-                <View className="flex-1 rounded-2xl bg-[#F5F0DC] p-3">
-                  <Text className="text-xs font-semibold text-slate-500">Cartes</Text>
-                  <Text className="mt-1 text-lg font-black text-slate-900">{userStats.total}</Text>
-                </View>
-                <View className="flex-1 rounded-2xl bg-[#F5F0DC] p-3">
-                  <Text className="text-xs font-semibold text-slate-500">Rares</Text>
-                  <Text className="mt-1 text-lg font-black text-slate-900">{userStats.rares}</Text>
-                </View>
-                <View className="flex-1 rounded-2xl bg-[#F5F0DC] p-3">
-                  <Text className="text-xs font-semibold text-slate-500">Qté</Text>
-                  <Text className="mt-1 text-lg font-black text-slate-900">{userStats.collection}</Text>
-                </View>
-              </View>
-
-              <View className="rounded-2xl border border-[#E8E3C8] bg-white px-4 py-3">
-                <TextInput
-                  value={query}
-                  onChangeText={setQuery}
-                  placeholder="Rechercher un Pokémon..."
-                  placeholderTextColor="#9CA3AF"
-                  className="text-base text-slate-900"
-                />
-              </View>
-            </View>
-
-            <View className="mt-4">
-              <FlatList
-                data={filters}
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                keyExtractor={(item) => item.key}
-                contentContainerStyle={{ gap: 10 }}
-                renderItem={({ item }) => {
-                  const active = filter === item.key;
-                  return (
-                    <Pressable
-                      onPress={() => setFilter(item.key)}
-                      className={`rounded-full px-4 py-2 ${
-                        active ? 'bg-[#C02A09]' : 'bg-white'
-                      }`}
-                    >
-                      <Text className={`text-sm font-bold ${active ? 'text-white' : 'text-slate-700'}`}>
-                        {item.label}
-                      </Text>
-                    </Pressable>
-                  );
-                }}
-              />
-            </View>
-          </View>
-        }
-        ListEmptyComponent={
-          loading ? (
-            <View className="mt-16 items-center">
-              <ActivityIndicator size="large" color="#C02A09" />
-              <Text className="mt-4 text-sm text-slate-600">Chargement du Pokédex...</Text>
-            </View>
-          ) : (
-            <View className="mt-16 items-center rounded-3xl bg-white/70 p-6">
-              <Text className="text-lg font-bold text-slate-900">Aucun Pokémon trouvé</Text>
-              <Text className="mt-2 text-center text-sm text-slate-500">
-                Essaie un autre filtre ou une autre recherche.
-              </Text>
-            </View>
-          )
-        }
+        ListHeaderComponent={renderHeader}
+        ListEmptyComponent={renderEmpty}
+        ListFooterComponent={renderFooter}
         renderItem={renderPokemon}
-        ListFooterComponent={
-          <View className="mt-6">
-            <View className="flex-row items-center justify-between rounded-3xl border border-[#E8E3C8] bg-white/80 px-4 py-3">
-              <Pressable
-                onPress={() => goToPage(page - 1)}
-                className={`rounded-2xl px-4 py-3 ${page === 1 ? 'bg-slate-100' : 'bg-[#FFCB05]'}`}
-              >
-                <Text className="font-bold text-slate-900">Prev</Text>
-              </Pressable>
-
-              <Text className="text-sm font-bold text-slate-700">
-                Page {page} / {totalPages}
-              </Text>
-
-              <Pressable
-                onPress={() => goToPage(page + 1)}
-                className={`rounded-2xl px-4 py-3 ${page === totalPages ? 'bg-slate-100' : 'bg-[#FFCB05]'}`}
-              >
-                <Text className="font-bold text-slate-900">Next</Text>
-              </Pressable>
-            </View>
-          </View>
-        }
+        style={{ opacity: loading ? 0.6 : 1 }}
       />
     </View>
   );

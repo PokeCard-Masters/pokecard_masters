@@ -11,14 +11,13 @@ import BackgroundCards from '@/components/login_components/BackgroundCard';
 import ParticlesBackground from '@/components/login_components/ParticlesBackground';
 import LightningOverlay from '@/components/login_components/LightOverlay';
 import PasswordStrength from '@/components/login_components/PasswordStrenght';
-import StarterPicker from '@/components/login_components/StarterPicker';
 import ProfChenQuote from '@/components/login_components/Quote';
 import SkeletonLoader from '@/components/login_components/SkeletonLoader';
 
 type Tab = 'login' | 'register';
 
 export default function LoginScreen() {
-  const { signIn, signInWithPassword, isLoading } = useAuth();
+  const { signIn, signInWithPassword, register, isLoading } = useAuth();
   const router = useRouter();
 
   const [tab, setTab] = useState<Tab>('login');
@@ -72,14 +71,25 @@ export default function LoginScreen() {
   const handleRegister = async () => {
     setError(null);
     triggerLightning();
-    if (!username.trim() || !email.trim() || !password || !starter) {
-      setError(!starter ? 'Choisis ton Pokémon de départ !' : 'Remplis tous les champs !');
+    if (!username.trim() || !email.trim() || !password) {
+      setError('Remplis tous les champs !');
       shakePokeball();
       hapticError();
       return;
     }
-    // TODO: brancher ta logique d'inscription
-  };
+    setSubmitting(true);
+    const err = await register(username.trim(), email.trim(), password);
+    setSubmitting(false);
+    if (err) {
+      setError(err);
+      shakePokeball();
+      hapticError();
+    } else {
+      hapticSuccess();
+      await playSuccessSound();
+      setTimeout(() => router.replace('/(drawer)/(tabs)/booster'), 400);
+    }
+  }; 
 
   const switchTab = (t: Tab) => {
     hapticLight();
@@ -224,8 +234,6 @@ export default function LoginScreen() {
             <>
               <Text style={styles.sectionLabel}>Nouvelle Aventure</Text>
 
-              <StarterPicker value={starter} onChange={setStarter} />
-
               <TextInput
                 style={styles.input}
                 placeholder="Nom de dresseur"
@@ -264,6 +272,11 @@ export default function LoginScreen() {
 
               <Pressable onPress={() => switchTab('login')}>
                 <Text style={styles.link}>← Déjà dresseur ? Se connecter</Text>
+              </Pressable>
+
+              <Pressable style={styles.btnGoogle} onPress={() => { hapticLight(); signIn(); }}>
+                <Image source={require('@/asset/google-logo.png')} style={styles.googleLogo} />
+                <Text style={styles.btnGoogleText}>S'inscrire avec Google</Text>
               </Pressable>
             </>
           )}
@@ -446,4 +459,3 @@ const styles = StyleSheet.create({
   typeBadge: { backgroundColor: '#3B4CCA', borderRadius: 20, paddingHorizontal: 10, paddingVertical: 4 },
   typeBadgeText: { fontFamily: 'PressStart2P_400Regular', fontSize: 7, color: '#fff' },
 });
-

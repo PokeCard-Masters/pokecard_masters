@@ -36,6 +36,7 @@ ALLOWED_HOSTS = ["localhost", "127.0.0.1", "pokecardmasters.lebaron.sh"]
 # Application definition
 
 INSTALLED_APPS = [
+    "corsheaders",
     "django.contrib.admin",
     "django.contrib.auth",
     "django.contrib.contenttypes",
@@ -43,7 +44,6 @@ INSTALLED_APPS = [
     "django.contrib.messages",
     "django.contrib.staticfiles",
     "app",
-    "corsheaders",
 ]
 
 MIDDLEWARE = [
