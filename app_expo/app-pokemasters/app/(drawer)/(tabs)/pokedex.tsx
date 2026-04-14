@@ -3,9 +3,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { API_BASE_URL } from '@/config/auth';
 
-// ─────────────────────────────────────────────
-// Types
-// ─────────────────────────────────────────────
+
 type Pokemon = {
   id: number;
   name: string;
@@ -24,45 +22,41 @@ type PaginatedResponse = {
 type Mode = 'pokedex' | 'collection';
 type FilterKey = 'all' | 'Rare' | 'Ultra Rare' | 'Secret';
 
-// ─────────────────────────────────────────────
-// Constants
-// ─────────────────────────────────────────────
+
 const PAGE_SIZE = 10;
 
 const RARITY_STYLES: Record<string, { bg: string; border: string; dot: string; label: string }> = {
-  Common:       { bg: 'bg-slate-100',   border: 'border-slate-200',   dot: 'bg-slate-400',   label: 'Commun'     },
-  Uncommon:     { bg: 'bg-emerald-100', border: 'border-emerald-200', dot: 'bg-emerald-400', label: 'Peu commun' },
-  Rare:         { bg: 'bg-blue-100',    border: 'border-blue-200',    dot: 'bg-blue-500',    label: 'Rare'       },
-  'Ultra Rare': { bg: 'bg-amber-100',   border: 'border-amber-200',   dot: 'bg-amber-400',   label: 'Ultra Rare' },
-  Secret:       { bg: 'bg-violet-100',  border: 'border-violet-200',  dot: 'bg-violet-500',  label: 'Secret'     },
+  Common: { bg: 'bg-slate-100', border: 'border-slate-200', dot: 'bg-slate-400', label: 'Commun' },
+  Uncommon: { bg: 'bg-emerald-100', border: 'border-emerald-200', dot: 'bg-emerald-400', label: 'Peu commun' },
+  Rare: { bg: 'bg-blue-100', border: 'border-blue-200', dot: 'bg-blue-500', label: 'Rare' },
+  'Ultra Rare': { bg: 'bg-amber-100', border: 'border-amber-200', dot: 'bg-amber-400', label: 'Ultra Rare' },
+  Secret: { bg: 'bg-violet-100', border: 'border-violet-200', dot: 'bg-violet-500', label: 'Secret' },
 };
 
 const getRarityStyle = (rarity: string | null) =>
   RARITY_STYLES[rarity ?? 'Common'] ?? RARITY_STYLES.Common;
 
 const FILTERS: { key: FilterKey; label: string; emoji: string }[] = [
-  { key: 'all',        label: 'Tous',       emoji: '📋' },
-  { key: 'Rare',       label: 'Rare',       emoji: '💎' },
+  { key: 'all', label: 'Tous', emoji: '📋' },
+  { key: 'Rare', label: 'Rare', emoji: '💎' },
   { key: 'Ultra Rare', label: 'Ultra Rare', emoji: '✨' },
-  { key: 'Secret',     label: 'Secret',     emoji: '🌟' },
+  { key: 'Secret', label: 'Secret', emoji: '🌟' },
 ];
 
-// ─────────────────────────────────────────────
-// Component
-// ─────────────────────────────────────────────
+
 export default function Pokedex() {
   const { token } = useAuth();
 
-  const [pokemons, setPokemons]         = useState<Pokemon[]>([]);
-  const [page, setPage]                 = useState(1);
-  const [totalCount, setTotalCount]     = useState(0);
-  const [loading, setLoading]           = useState(false);
-  const [error, setError]               = useState<string | null>(null);
-  const [mode, setMode]                 = useState<Mode>('pokedex');
+  const [pokemons, setPokemons] = useState<Pokemon[]>([]);
+  const [page, setPage] = useState(1);
+  const [totalCount, setTotalCount] = useState(0);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [mode, setMode] = useState<Mode>('pokedex');
   const [activeFilter, setActiveFilter] = useState<FilterKey>('all');
-  const [query, setQuery]               = useState('');
+  const [query, setQuery] = useState('');
 
-  const listRef    = useRef<FlatList>(null);
+  const listRef = useRef<FlatList>(null);
   const totalPages = Math.max(1, Math.ceil(totalCount / PAGE_SIZE));
 
 
@@ -71,7 +65,7 @@ export default function Pokedex() {
     setError(null);
     try {
       const endpoint = currentMode === 'collection'
-        ? '/api/user/collection/pagination' 
+        ? '/api/user/collection/pagination'
         : '/api/user/pagination';
 
       const rarityParam = rarity !== 'all' ? `&rarity=${encodeURIComponent(rarity)}` : '';
@@ -95,12 +89,10 @@ export default function Pokedex() {
     }
   };
 
-  // Re-fetch à chaque changement de page, mode ou filtre
   useEffect(() => {
     fetchPokedex(page, mode, activeFilter);
   }, [page, mode, activeFilter]);
 
-  // ── Recherche locale sur la page courante ────────────────────────────────
   const visiblePokemons = useMemo(() => {
     const normalized = query.trim().toLowerCase();
     if (!normalized) return pokemons;
@@ -111,7 +103,6 @@ export default function Pokedex() {
     );
   }, [pokemons, query]);
 
-  // ── Stats ────────────────────────────────────────────────────────────────
   const rarityCount = useMemo(
     () => pokemons.filter((p) =>
       p.rarity === 'Rare' || p.rarity === 'Ultra Rare' || p.rarity === 'Secret'
@@ -124,7 +115,6 @@ export default function Pokedex() {
     [pokemons]
   );
 
-  // ── Navigation ───────────────────────────────────────────────────────────
   const goToPage = (newPage: number) => {
     if (newPage < 1 || newPage > totalPages || loading) return;
     setPage(newPage);
@@ -144,11 +134,10 @@ export default function Pokedex() {
     setQuery('');
   };
 
-  // ─────────────────────────────────────────────
-  // Render helpers
-  // ─────────────────────────────────────────────
   const renderPokemon = ({ item }: { item: Pokemon }) => {
     const style = getRarityStyle(item.rarity);
+
+    console.log('Image URL:', `${API_BASE_URL}${item.image}`); // ← ici
 
     return (
       <Pressable
@@ -172,9 +161,7 @@ export default function Pokedex() {
         <View className="items-center">
           <View className="h-24 w-24 items-center justify-center rounded-2xl bg-[#F5F0DC]">
             <Image
-              source={{ uri: `${API_BASE_URL}${item.image}` }}
-
-              className="h-20 w-20"
+              source={{ uri: item.image + '/high.png' }} className="h-20 w-20"
               resizeMode="contain"
             />
           </View>
@@ -221,9 +208,9 @@ export default function Pokedex() {
         {/* Stats */}
         <View className="mt-4 flex-row gap-3">
           {[
-            { label: 'Total',     value: totalCount  },
-            { label: 'Rares +',   value: rarityCount },
-            { label: 'Possédées', value: totalOwned  },
+            { label: 'Total', value: totalCount },
+            { label: 'Rares +', value: rarityCount },
+            { label: 'Possédées', value: totalOwned },
           ].map(({ label, value }) => (
             <View key={label} className="flex-1 items-center rounded-2xl bg-[#F5F0DC] py-3">
               <Text className="text-lg font-black text-slate-900">{value}</Text>
@@ -256,9 +243,8 @@ export default function Pokedex() {
           <Pressable
             key={m}
             onPress={() => handleModeChange(m)}
-            className={`flex-1 items-center rounded-xl py-2.5 ${
-              mode === m ? 'bg-[#C02A09]' : ''
-            }`}
+            className={`flex-1 items-center rounded-xl py-2.5 ${mode === m ? 'bg-[#C02A09]' : ''
+              }`}
             style={{ elevation: mode === m ? 2 : 0 }}
           >
             <Text className={`text-sm font-bold ${mode === m ? 'text-white' : 'text-slate-600'}`}>
@@ -281,9 +267,8 @@ export default function Pokedex() {
             return (
               <Pressable
                 onPress={() => handleFilterChange(item.key)}
-                className={`flex-row items-center gap-1.5 rounded-full px-4 py-2.5 ${
-                  active ? 'bg-[#C02A09]' : 'border border-[#E8E3C8] bg-white'
-                }`}
+                className={`flex-row items-center gap-1.5 rounded-full px-4 py-2.5 ${active ? 'bg-[#C02A09]' : 'border border-[#E8E3C8] bg-white'
+                  }`}
                 style={{ elevation: active ? 3 : 1 }}
               >
                 <Text className="text-sm">{item.emoji}</Text>

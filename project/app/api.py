@@ -277,16 +277,45 @@ def open_booster(request):
         "booster_count": user.booster_count,
     }
 
-
 @api.get("/user/pagination", response=List[PlayerCardSchema], auth=jwt_auth)
 @paginate
-def pagination(request):
+def pagination(request, rarity: Optional[str] = None):
+    claims = request.auth_user
+    user_id = claims["sub"]
+    owned = {
+        pc.card_id: pc.quantity
+        for pc in PlayerCard.objects.filter(card_user__user_id=user_id)
+    }
+
+    queryset = Card.objects.all()
+    if rarity:
+        queryset = queryset.filter(rarity__icontains=rarity)
+
+    return [
+        {
+            "id": card.id,
+            "name": card.name,
+            "image": card.image,
+            "category": card.category,
+            "rarity": card.rarity,
+            "illustrator": card.illustrator,
+            "quantity": owned.get(card.id, 0), 
+        }
+        for card in queryset
+    ]
+
+
+@api.get("/user/collection/pagination", response=List[PlayerCardSchema], auth=jwt_auth)
+@paginate
+def collection_pagination(request, rarity: Optional[str] = None):
     claims = request.auth_user
     user_id = claims["sub"]
 
     queryset = PlayerCard.objects.select_related("card").filter(
         card_user__user_id=user_id
     )
+    if rarity:
+        queryset = queryset.filter(card__rarity__icontains=rarity)
 
     return [
         {
