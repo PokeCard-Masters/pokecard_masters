@@ -65,16 +65,13 @@ export default function Pokedex() {
   const listRef    = useRef<FlatList>(null);
   const totalPages = Math.max(1, Math.ceil(totalCount / PAGE_SIZE));
 
-  // ── Fetch ───────────────────────────────────────────────────────────────
-  // 🐛 FIX #1 : renommé `data` pour ne plus écraser le type `PaginatedResponse`
-  // 🐛 FIX #2 : le mode change l'endpoint appelé
-  // 🐛 FIX #3 : le filtre rareté est envoyé au serveur via query param
+
   const fetchPokedex = async (pageToLoad: number, currentMode: Mode, rarity: FilterKey) => {
     setLoading(true);
     setError(null);
     try {
       const endpoint = currentMode === 'collection'
-        ? '/api/user/collection/pagination'   // ← adapte selon ton backend
+        ? '/api/user/collection/pagination' 
         : '/api/user/pagination';
 
       const rarityParam = rarity !== 'all' ? `&rarity=${encodeURIComponent(rarity)}` : '';
@@ -86,7 +83,6 @@ export default function Pokedex() {
 
       if (!response.ok) throw new Error(`Erreur HTTP ${response.status}`);
 
-      // 🐛 FIX #1 : `data` au lieu de `PaginatedResponse` (qui écrasait le type)
       const data: PaginatedResponse = await response.json();
       setPokemons(data.items);
       setTotalCount(data.count);
@@ -176,7 +172,8 @@ export default function Pokedex() {
         <View className="items-center">
           <View className="h-24 w-24 items-center justify-center rounded-2xl bg-[#F5F0DC]">
             <Image
-              source={{ uri: item.image }}
+              source={{ uri: `${API_BASE_URL}${item.image}` }}
+
               className="h-20 w-20"
               resizeMode="contain"
             />

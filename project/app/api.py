@@ -1,14 +1,15 @@
-import uuid
-import random
-from ninja import NinjaAPI, Schema
-from typing import List
 from django.contrib.auth.hashers import make_password, check_password
+from .authentification import GoogleJWTAuth, create_app_jwt
+from .models import Card, User, PlayerCard
+from ninja.pagination import paginate
+from ninja import NinjaAPI, Schema
 from django.db import transaction
 from django.db.models import F
-from .models import Card, User, PlayerCard
-from .authentification import GoogleJWTAuth, create_app_jwt
-from ninja.pagination import paginate
 from typing import Optional
+from typing import List
+
+import random
+import uuid
 
 jwt_auth = GoogleJWTAuth()
 
@@ -277,13 +278,28 @@ def open_booster(request):
     }
 
 
-@api.get(
-    "/user/pagination", response={200: list[CardsOut], 404: ErrorOut, 500: TokenOut}
-)
+@api.get("/user/pagination", response=List[PlayerCardSchema], auth=jwt_auth)
 @paginate
 def pagination(request):
-    return Card.objects.all()
+    claims = request.auth_user
+    user_id = claims["sub"]
 
+    queryset = PlayerCard.objects.select_related("card").filter(
+        card_user__user_id=user_id
+    )
+
+    return [
+        {
+            "id": pc.card.id,
+            "name": pc.card.name,
+            "image": pc.card.image,
+            "category": pc.card.category,
+            "rarity": pc.card.rarity,
+            "illustrator": pc.card.illustrator,
+            "quantity": pc.quantity,
+        }
+        for pc in queryset
+    ]
 
 @api.get("/cards", response=List[CardsOut])
 def get_cards(request, types: Optional[str] = None):
