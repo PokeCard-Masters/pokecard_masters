@@ -1,5 +1,5 @@
 import { ActivityIndicator, FlatList, Image, Pressable, StatusBar, Text, TextInput, View } from 'react-native';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { API_BASE_URL } from '@/config/auth';
 
@@ -118,6 +118,7 @@ export default function Pokedex() {
   const goToPage = (newPage: number) => {
     if (newPage < 1 || newPage > totalPages || loading) return;
     setPage(newPage);
+    setQuery('');
     listRef.current?.scrollToOffset({ offset: 0, animated: true });
   };
 
@@ -134,10 +135,8 @@ export default function Pokedex() {
     setQuery('');
   };
 
-  const renderPokemon = ({ item }: { item: Pokemon }) => {
+  const renderPokemon = useCallback(({ item }: { item: Pokemon }) => {
     const style = getRarityStyle(item.rarity);
-
-    console.log('Image URL:', `${API_BASE_URL}${item.image}`); // ← ici
 
     return (
       <Pressable
@@ -161,7 +160,8 @@ export default function Pokedex() {
         <View className="items-center">
           <View className="h-24 w-24 items-center justify-center rounded-2xl bg-[#F5F0DC]">
             <Image
-              source={{ uri: item.image + '/high.png' }} className="h-20 w-20"
+              source={{ uri: item.image + '/high.png' }}
+              className="h-20 w-20"
               resizeMode="contain"
             />
           </View>
@@ -184,9 +184,10 @@ export default function Pokedex() {
         </View>
       </Pressable>
     );
-  };
+  }, []); // aucune dépendance externe dans le rendu de la carte
 
-  const renderHeader = () => (
+  // ✅ FIX 1 : useMemo pour stabiliser le header et éviter le remontage du TextInput
+  const headerElement = useMemo(() => (
     <View className="mb-4">
 
       {/* ── Hero card ── */}
@@ -243,8 +244,7 @@ export default function Pokedex() {
           <Pressable
             key={m}
             onPress={() => handleModeChange(m)}
-            className={`flex-1 items-center rounded-xl py-2.5 ${mode === m ? 'bg-[#C02A09]' : ''
-              }`}
+            className={`flex-1 items-center rounded-xl py-2.5 ${mode === m ? 'bg-[#C02A09]' : ''}`}
             style={{ elevation: mode === m ? 2 : 0 }}
           >
             <Text className={`text-sm font-bold ${mode === m ? 'text-white' : 'text-slate-600'}`}>
@@ -267,8 +267,9 @@ export default function Pokedex() {
             return (
               <Pressable
                 onPress={() => handleFilterChange(item.key)}
-                className={`flex-row items-center gap-1.5 rounded-full px-4 py-2.5 ${active ? 'bg-[#C02A09]' : 'border border-[#E8E3C8] bg-white'
-                  }`}
+                className={`flex-row items-center gap-1.5 rounded-full px-4 py-2.5 ${
+                  active ? 'bg-[#C02A09]' : 'border border-[#E8E3C8] bg-white'
+                }`}
                 style={{ elevation: active ? 3 : 1 }}
               >
                 <Text className="text-sm">{item.emoji}</Text>
@@ -281,7 +282,7 @@ export default function Pokedex() {
         />
       </View>
     </View>
-  );
+  ), [query, mode, activeFilter, totalCount, rarityCount, totalOwned]);
 
   const renderEmpty = () => {
     if (loading) return (
@@ -347,9 +348,6 @@ export default function Pokedex() {
     </View>
   );
 
-  // ─────────────────────────────────────────────
-  // Render
-  // ─────────────────────────────────────────────
   return (
     <View className="flex-1 bg-[#F5F0DC]">
       <StatusBar barStyle="dark-content" />
@@ -362,7 +360,7 @@ export default function Pokedex() {
         columnWrapperStyle={{ gap: 12 }}
         contentContainerStyle={{ padding: 16, paddingBottom: 40 }}
         ItemSeparatorComponent={() => <View className="h-3" />}
-        ListHeaderComponent={renderHeader}
+        ListHeaderComponent={headerElement}   
         ListEmptyComponent={renderEmpty}
         ListFooterComponent={renderFooter}
         renderItem={renderPokemon}

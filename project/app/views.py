@@ -72,3 +72,4 @@ def card(request):
     ctx = {"card": r_json, "name": name_json, "rarity": rarity_json}
 
     return render(request, "index.html", ctx)
+

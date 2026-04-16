@@ -336,3 +336,5 @@ def get_cards(request, types: Optional[str] = None):
     if types:
         cards = cards.filter(types__icontains=types)
     return cards
+
+
