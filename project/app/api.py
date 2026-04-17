@@ -33,7 +33,7 @@ class RegisterIn(Schema):
     email: str
     password: str
     name: str
-    pseudo : str
+    pseudo: str
 
 
 class LoginIn(Schema):
@@ -207,11 +207,7 @@ RARE_WEIGHTS = {
 }
 
 
-@api.post(
-    "/booster/open",
-    auth=jwt_auth,
-    response={200: BoosterCountOut, 404: ErrorOut, 500: ErrorOut},
-)
+@api.post("/booster/open", auth=jwt_auth, response={200: BoosterCountOut, 404: ErrorOut, 500: ErrorOut})
 def open_booster(request):
     claims = request.auth_user
     user_id = claims["sub"]
@@ -277,6 +273,7 @@ def open_booster(request):
         "booster_count": user.booster_count,
     }
 
+
 @api.get("/user/pagination", response=List[PlayerCardSchema], auth=jwt_auth)
 @paginate
 def pagination(request, rarity: Optional[str] = None):
@@ -299,7 +296,7 @@ def pagination(request, rarity: Optional[str] = None):
             "category": card.category,
             "rarity": card.rarity,
             "illustrator": card.illustrator,
-            "quantity": owned.get(card.id, 0), 
+            "quantity": owned.get(card.id, 0),
         }
         for card in queryset
     ]
@@ -330,11 +327,10 @@ def collection_pagination(request, rarity: Optional[str] = None):
         for pc in queryset
     ]
 
+
 @api.get("/cards", response=List[CardsOut])
 def get_cards(request, types: Optional[str] = None):
     cards = Card.objects.all()
     if types:
         cards = cards.filter(types__icontains=types)
     return cards
-
-

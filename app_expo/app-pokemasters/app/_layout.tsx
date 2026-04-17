@@ -29,7 +29,9 @@ function RootNavigator() {
     <Stack>
       <Stack.Screen
         name="(auth)"
-        options={{ headerShown: false }}
+        options={{
+          headerShown: false,
+        }}
       />
       <Stack.Screen
         name="(drawer)"

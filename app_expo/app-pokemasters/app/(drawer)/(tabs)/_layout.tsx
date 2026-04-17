@@ -1,6 +1,6 @@
 import { Ionicons, MaterialIcons } from '@expo/vector-icons';
 import { StatusBar } from 'expo-status-bar';
-import { Tabs, Stack } from 'expo-router';
+import { Tabs } from 'expo-router';
 import { View } from 'react-native';
 import FloatingUserMenu from '@/components/login_components/FloattingMenu';
 
