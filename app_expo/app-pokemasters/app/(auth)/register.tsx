@@ -6,7 +6,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useFonts, PressStart2P_400Regular } from '@expo-google-fonts/press-start-2p';
 import Svg, { Path } from 'react-native-svg';
 import { Image } from 'react-native'
-import Pokeball from '@/components/pokeball'
+import Pokeball from '@/components/login_components/pokeball'
 
 export default function RegisterScreen() {
   const { register, signIn,  isLoading } = useAuth();

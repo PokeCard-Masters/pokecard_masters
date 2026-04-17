@@ -11,7 +11,7 @@ export default function DrawerLayout() {
                     name="(tabs)" 
                     options={{
                         headerShown: false,
-                        title: 'Profil',
+                        title: 'Game',
                 }}
                 />
             </Drawer>

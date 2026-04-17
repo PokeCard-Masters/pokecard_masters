@@ -1,9 +1,8 @@
-import { StyleSheet, View, Text, FlatList, Image, StatusBar, ActivityIndicator, TouchableOpacity } from 'react-native';
-import { useEffect, useState, useCallback, useRef } from 'react';
-import { API_BASE_URL } from '@/config/auth';
+import { ActivityIndicator, FlatList, Image, Pressable, StatusBar, Text, TextInput, View } from 'react-native';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useAuth } from '@/context/AuthContext';
-import { apiFetch } from '@/services/api';
-import DropDown from '@/components/DropDown';
+import { API_BASE_URL } from '@/config/auth';
+
 
 type Pokemon = {
   id: number;
@@ -20,409 +19,353 @@ type PaginatedResponse = {
   count: number;
 };
 
-type RarityKey = 'Common' | 'Uncommon' | 'Rare' | 'Ultra Rare' | 'Secret';
+type Mode = 'pokedex' | 'collection';
+type FilterKey = 'all' | 'Rare' | 'Ultra Rare' | 'Secret';
 
-const RARITY_STYLES: Record<RarityKey, { color: string; bg: string; border: string }> = {
-  'Common':     { color: '#90a4ae', bg: '#90a4ae11', border: '#90a4ae44' },
-  'Uncommon':   { color: '#66bb6a', bg: '#66bb6a11', border: '#66bb6a44' },
-  'Rare':       { color: '#4fc3f7', bg: '#4fc3f711', border: '#4fc3f744' },
-  'Ultra Rare': { color: '#f0c040', bg: '#f0c04011', border: '#f0c04044' },
-  'Secret':     { color: '#9c6bff', bg: '#9c6bff11', border: '#9c6bff44' },
-};
 
 const PAGE_SIZE = 10;
 
+const RARITY_STYLES: Record<string, { bg: string; border: string; dot: string; label: string }> = {
+  Common: { bg: 'bg-slate-100', border: 'border-slate-200', dot: 'bg-slate-400', label: 'Commun' },
+  Uncommon: { bg: 'bg-emerald-100', border: 'border-emerald-200', dot: 'bg-emerald-400', label: 'Peu commun' },
+  Rare: { bg: 'bg-blue-100', border: 'border-blue-200', dot: 'bg-blue-500', label: 'Rare' },
+  'Ultra Rare': { bg: 'bg-amber-100', border: 'border-amber-200', dot: 'bg-amber-400', label: 'Ultra Rare' },
+  Secret: { bg: 'bg-violet-100', border: 'border-violet-200', dot: 'bg-violet-500', label: 'Secret' },
+};
+
+const getRarityStyle = (rarity: string | null) =>
+  RARITY_STYLES[rarity ?? 'Common'] ?? RARITY_STYLES.Common;
+
+const FILTERS: { key: FilterKey; label: string; emoji: string }[] = [
+  { key: 'all', label: 'Tous', emoji: '📋' },
+  { key: 'Rare', label: 'Rare', emoji: '💎' },
+  { key: 'Ultra Rare', label: 'Ultra Rare', emoji: '✨' },
+  { key: 'Secret', label: 'Secret', emoji: '🌟' },
+];
+
+
 export default function Pokedex() {
   const { token } = useAuth();
+
   const [pokemons, setPokemons] = useState<Pokemon[]>([]);
   const [page, setPage] = useState(1);
   const [totalCount, setTotalCount] = useState(0);
   const [loading, setLoading] = useState(false);
-  const [filter, setFilter] = useState<string | null>('pokedex');
-  const filterRef = useRef(filter);
+  const [error, setError] = useState<string | null>(null);
+  const [mode, setMode] = useState<Mode>('pokedex');
+  const [activeFilter, setActiveFilter] = useState<FilterKey>('all');
+  const [query, setQuery] = useState('');
+
   const listRef = useRef<FlatList>(null);
-  const [userStats, setUserStats] = useState({ total: 0, rares: 0, illustrateurs: 0 });
+  const totalPages = Math.max(1, Math.ceil(totalCount / PAGE_SIZE));
 
-  const totalPages = Math.ceil(totalCount / PAGE_SIZE);
 
-  const fetchPokedex = useCallback(async (pageToLoad: number) => {
+  const fetchPokedex = async (pageToLoad: number, currentMode: Mode, rarity: FilterKey) => {
     setLoading(true);
+    setError(null);
     try {
-      const response = await fetch(
-        `${API_BASE_URL}/api/user/pagination?page=${pageToLoad}&limit=${PAGE_SIZE}`
-      );
-      if (!response.ok) throw new Error(`Erreur HTTP : ${response.status}`);
+      const endpoint = currentMode === 'collection'
+        ? '/api/user/collection/pagination'
+        : '/api/user/pagination';
+
+      const rarityParam = rarity !== 'all' ? `&rarity=${encodeURIComponent(rarity)}` : '';
+      const url = `${API_BASE_URL}${endpoint}?page=${pageToLoad}&limit=${PAGE_SIZE}${rarityParam}`;
+
+      const response = await fetch(url, {
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      });
+
+      if (!response.ok) throw new Error(`Erreur HTTP ${response.status}`);
 
       const data: PaginatedResponse = await response.json();
-      if (filterRef.current !== 'pokedex') return;
       setPokemons(data.items);
       setTotalCount(data.count);
-    } catch (error) {
-      console.error('Erreur fetch pagination :', error);
+    } catch (err: any) {
+      console.error('Type:', err?.name);
+      console.error('Message:', err?.message);
+      setError('Impossible de charger le Pokédex. Vérifie ta connexion.');
     } finally {
       setLoading(false);
     }
-  }, []);
-
-  const fetchMyCards = useCallback(async () => {
-    if (!token) return;
-    setLoading(true);
-    try {
-      const response = await apiFetch('/api/player/card', token);
-      if (!response.ok) throw new Error(`Erreur HTTP : ${response.status}`);
-
-      const data: Pokemon[] = await response.json();
-      if (filterRef.current !== 'mes_cartes') return;
-      setPokemons(data);
-      setTotalCount(data.length);
-      setUserStats({
-        total: data.length,
-        rares: data.filter(p => p.rarity === 'Rare' || p.rarity === 'Ultra Rare' || p.rarity === 'Secret').length,
-        illustrateurs: new Set(data.map(p => p.illustrator).filter(Boolean)).size,
-      });
-    } catch (error) {
-      console.error('Erreur fetch mes cartes :', error);
-    } finally {
-      setLoading(false);
-    }
-  }, [token]);
-
-  const handleFilterChange = useCallback((value: string | null) => {
-    setFilter(value);
-    filterRef.current = value;
-    setPokemons([]);
-    setPage(1);
-    setTotalCount(0);
-
-    if (value === 'mes_cartes') {
-      fetchMyCards();
-    }
-  }, [fetchMyCards]);
-
-  // Fetch user card stats once on mount
-  useEffect(() => {
-    if (!token) return;
-    (async () => {
-      try {
-        const response = await apiFetch('/api/player/card', token);
-        if (!response.ok) return;
-        const data: Pokemon[] = await response.json();
-        setUserStats({
-          total: data.length,
-          rares: data.filter(p => p.rarity === 'Rare' || p.rarity === 'Ultra Rare' || p.rarity === 'Secret').length,
-          illustrateurs: new Set(data.map(p => p.illustrator).filter(Boolean)).size,
-        });
-      } catch {}
-    })();
-  }, [token]);
+  };
 
   useEffect(() => {
-    if (filter === 'pokedex') {
-      fetchPokedex(page);
-    }
-  }, [filter, page]);
+    fetchPokedex(page, mode, activeFilter);
+  }, [page, mode, activeFilter]);
+
+  const visiblePokemons = useMemo(() => {
+    const normalized = query.trim().toLowerCase();
+    if (!normalized) return pokemons;
+    return pokemons.filter((p) =>
+      `${p.id} ${p.name} ${p.category ?? ''} ${p.rarity ?? ''}`
+        .toLowerCase()
+        .includes(normalized)
+    );
+  }, [pokemons, query]);
+
+  const rarityCount = useMemo(
+    () => pokemons.filter((p) =>
+      p.rarity === 'Rare' || p.rarity === 'Ultra Rare' || p.rarity === 'Secret'
+    ).length,
+    [pokemons]
+  );
+
+  const totalOwned = useMemo(
+    () => pokemons.reduce((acc, p) => acc + p.quantity, 0),
+    [pokemons]
+  );
 
   const goToPage = (newPage: number) => {
     if (newPage < 1 || newPage > totalPages || loading) return;
     setPage(newPage);
+    setQuery('');
     listRef.current?.scrollToOffset({ offset: 0, animated: true });
   };
 
-  const getRarityStyle = (rarity: string | null) =>
-    RARITY_STYLES[(rarity as RarityKey)] ?? RARITY_STYLES['Common'];
+  const handleModeChange = (newMode: Mode) => {
+    setMode(newMode);
+    setPage(1);
+    setActiveFilter('all');
+    setQuery('');
+  };
 
-  return (
-    <View style={styles.container}>
-      <StatusBar barStyle="light-content" />
+  const handleFilterChange = (key: FilterKey) => {
+    setActiveFilter(key);
+    setPage(1);
+    setQuery('');
+  };
 
-      <View style={{ zIndex: 1000, elevation: 1000 }}>
-        <View style={styles.header}>
-          <View style={styles.headerRow}>
-            <View style={styles.pokeball}>
-              <View style={styles.pokeballCenter} />
-            </View>
-            <Text style={styles.title}>Ma Collection</Text>
-          </View>
-          <Text style={styles.subtitle}>POKÉMON TCG · VAULT DU DRESSEUR</Text>
-          <View style={styles.statsBar}>
-            <View style={styles.stat}>
-              <Text style={styles.statValue}>{userStats.total}</Text>
-              <Text style={styles.statLabel}>CARTES</Text>
-            </View>
-            <View style={styles.statDivider} />
-            <View style={styles.stat}>
-              <Text style={styles.statValue}>{userStats.rares}</Text>
-              <Text style={styles.statLabel}>RARES</Text>
-            </View>
-            <View style={styles.statDivider} />
-            <View style={styles.stat}>
-              <Text style={styles.statValue}>{userStats.illustrateurs}</Text>
-              <Text style={styles.statLabel}>ILLUS.</Text>
-            </View>
+  const renderPokemon = useCallback(({ item }: { item: Pokemon }) => {
+    const style = getRarityStyle(item.rarity);
+
+    return (
+      <Pressable
+        className={`flex-1 rounded-3xl border-2 ${style.border} bg-white p-3 shadow-sm active:opacity-80`}
+        style={{ elevation: 2 }}
+      >
+        {/* Header */}
+        <View className="mb-2 flex-row items-center justify-between">
+          <Text className="text-xs font-bold text-slate-400">
+            #{String(item.id).padStart(3, '0')}
+          </Text>
+          <View className={`flex-row items-center gap-1 rounded-full px-2 py-1 ${style.bg}`}>
+            <View className={`h-1.5 w-1.5 rounded-full ${style.dot}`} />
+            <Text className="text-[10px] font-bold text-slate-700">
+              {item.rarity ?? 'Common'}
+            </Text>
           </View>
         </View>
-        <DropDown onSelect={handleFilterChange} defaultValue="pokedex" />
+
+        {/* Image */}
+        <View className="items-center">
+          <View className="h-24 w-24 items-center justify-center rounded-2xl bg-[#F5F0DC]">
+            <Image
+              source={{ uri: item.image + '/high.png' }}
+              className="h-20 w-20"
+              resizeMode="contain"
+            />
+          </View>
+        </View>
+
+        {/* Nom */}
+        <Text className="mt-3 text-sm font-extrabold text-slate-900" numberOfLines={1}>
+          {item.name}
+        </Text>
+
+        {/* Catégorie */}
+        <Text className="mt-0.5 text-[11px] text-slate-400" numberOfLines={1}>
+          {item.category ?? 'Pokémon'}
+        </Text>
+
+        {/* Quantité */}
+        <View className="mt-3 flex-row items-center justify-between rounded-xl bg-[#FFF8E6] px-2 py-1">
+          <Text className="text-[11px] font-semibold text-slate-500">Quantité</Text>
+          <Text className="text-sm font-black text-[#C02A09]">×{item.quantity}</Text>
+        </View>
+      </Pressable>
+    );
+  }, []); // aucune dépendance externe dans le rendu de la carte
+
+  // ✅ FIX 1 : useMemo pour stabiliser le header et éviter le remontage du TextInput
+  const headerElement = useMemo(() => (
+    <View className="mb-4">
+
+      {/* ── Hero card ── */}
+      <View className="rounded-[28px] border border-[#E8E3C8] bg-white p-5 shadow-sm">
+        <View className="flex-row items-center justify-between">
+          <View>
+            <Text className="text-[11px] font-black uppercase tracking-widest text-[#C02A09]">
+              Pokédex
+            </Text>
+            <Text className="mt-0.5 text-2xl font-black text-slate-900">
+              {mode === 'pokedex' ? 'Tous les Pokémon' : 'Ma collection'}
+            </Text>
+          </View>
+          <View className="h-14 w-14 items-center justify-center rounded-full bg-[#FFCB05]">
+            <Text className="text-2xl">⚡</Text>
+          </View>
+        </View>
+
+        {/* Stats */}
+        <View className="mt-4 flex-row gap-3">
+          {[
+            { label: 'Total', value: totalCount },
+            { label: 'Rares +', value: rarityCount },
+            { label: 'Possédées', value: totalOwned },
+          ].map(({ label, value }) => (
+            <View key={label} className="flex-1 items-center rounded-2xl bg-[#F5F0DC] py-3">
+              <Text className="text-lg font-black text-slate-900">{value}</Text>
+              <Text className="mt-0.5 text-[10px] font-semibold text-slate-500">{label}</Text>
+            </View>
+          ))}
+        </View>
+
+        {/* Search */}
+        <View className="mt-4 flex-row items-center rounded-2xl border border-[#E8E3C8] bg-[#FAFAF7] px-4 py-3">
+          <Text className="mr-2 text-slate-400">🔍</Text>
+          <TextInput
+            value={query}
+            onChangeText={setQuery}
+            placeholder="Rechercher un Pokémon..."
+            placeholderTextColor="#9CA3AF"
+            className="flex-1 text-sm text-slate-900"
+          />
+          {query.length > 0 && (
+            <Pressable onPress={() => setQuery('')}>
+              <Text className="text-slate-400">✕</Text>
+            </Pressable>
+          )}
+        </View>
       </View>
 
-      <View style={styles.divider} />
-      <View style={{ flex: 1, zIndex: 1, elevation: 1 }}>
-        {loading ? (
-          <ActivityIndicator color="#f0c040" style={{ marginVertical: 32 }} />
-        ) : (
+      {/* ── Toggle Pokédex / Ma collection ── */}
+      <View className="mt-4 flex-row items-center rounded-2xl border border-[#E8E3C8] bg-white p-1.5">
+        {(['pokedex', 'collection'] as Mode[]).map((m) => (
+          <Pressable
+            key={m}
+            onPress={() => handleModeChange(m)}
+            className={`flex-1 items-center rounded-xl py-2.5 ${mode === m ? 'bg-[#C02A09]' : ''}`}
+            style={{ elevation: mode === m ? 2 : 0 }}
+          >
+            <Text className={`text-sm font-bold ${mode === m ? 'text-white' : 'text-slate-600'}`}>
+              {m === 'pokedex' ? '📖 Pokédex' : '⭐ Ma collection'}
+            </Text>
+          </Pressable>
+        ))}
+      </View>
+
+      {/* ── Filtres rareté ── */}
+      <View className="mt-4">
         <FlatList
-          ref={listRef}
-          data={pokemons}
-          keyExtractor={(item) => item.id.toString()}
-          numColumns={2}
-          columnWrapperStyle={styles.row}
-          contentContainerStyle={styles.grid}
-          ListFooterComponent={filter === 'pokedex' && totalPages > 1 ? (
-            <View style={styles.pagination}>
-              <TouchableOpacity
-                style={[styles.pageBtn, page <= 1 && styles.pageBtnDisabled]}
-                onPress={() => goToPage(page - 1)}
-                disabled={page <= 1}
-              >
-                <Text style={[styles.pageBtnText, page <= 1 && styles.pageBtnTextDisabled]}>Préc.</Text>
-              </TouchableOpacity>
-              <Text style={styles.pageInfo}>{page} / {totalPages}</Text>
-              <TouchableOpacity
-                style={[styles.pageBtn, page >= totalPages && styles.pageBtnDisabled]}
-                onPress={() => goToPage(page + 1)}
-                disabled={page >= totalPages}
-              >
-                <Text style={[styles.pageBtnText, page >= totalPages && styles.pageBtnTextDisabled]}>Suiv.</Text>
-              </TouchableOpacity>
-            </View>
-          ) : null}
+          data={FILTERS}
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          keyExtractor={(item) => item.key}
+          contentContainerStyle={{ gap: 8 }}
           renderItem={({ item }) => {
-            const rs = getRarityStyle(item.rarity);
+            const active = activeFilter === item.key;
             return (
-              <View style={styles.card}>
-                <View style={[styles.cardInner, { borderColor: rs.border }]}>
-                  <View style={styles.imgWrap}>
-                    <Image
-                      source={{ uri: item.image + '/high.png' }}
-                      style={styles.image}
-                      resizeMode="contain"
-                    />
-                    <View style={styles.qtyBadge}>
-                      <Text style={styles.qtyText}>×{item.quantity}</Text>
-                    </View>
-                  </View>
-                  <Text style={styles.cardName} numberOfLines={1}>{item.name}</Text>
-                  {item.rarity && (
-                    <View style={[styles.rarityBadge, { backgroundColor: rs.bg, borderColor: rs.border }]}>
-                      <Text style={[styles.rarityText, { color: rs.color }]}>
-                        {item.rarity.toUpperCase()}
-                      </Text>
-                    </View>
-                  )}
-                  {item.illustrator && (
-                    <Text style={styles.illustrator} numberOfLines={1}>
-                      <Text style={{ color: '#9c6bff' }}>✦ </Text>
-                      {item.illustrator}
-                    </Text>
-                  )}
-                </View>
-              </View>
+              <Pressable
+                onPress={() => handleFilterChange(item.key)}
+                className={`flex-row items-center gap-1.5 rounded-full px-4 py-2.5 ${
+                  active ? 'bg-[#C02A09]' : 'border border-[#E8E3C8] bg-white'
+                }`}
+                style={{ elevation: active ? 3 : 1 }}
+              >
+                <Text className="text-sm">{item.emoji}</Text>
+                <Text className={`text-sm font-bold ${active ? 'text-white' : 'text-slate-700'}`}>
+                  {item.label}
+                </Text>
+              </Pressable>
             );
           }}
         />
-        )}
+      </View>
+    </View>
+  ), [query, mode, activeFilter, totalCount, rarityCount, totalOwned]);
+
+  const renderEmpty = () => {
+    if (loading) return (
+      <View className="mt-16 items-center">
+        <ActivityIndicator size="large" color="#C02A09" />
+        <Text className="mt-4 text-sm font-semibold text-slate-600">Chargement…</Text>
+      </View>
+    );
+
+    if (error) return (
+      <View className="mt-16 items-center rounded-3xl border border-red-100 bg-red-50 p-6">
+        <Text className="text-2xl">⚠️</Text>
+        <Text className="mt-2 text-base font-bold text-red-700">Erreur de chargement</Text>
+        <Text className="mt-1 text-center text-sm text-red-500">{error}</Text>
+        <Pressable
+          onPress={() => fetchPokedex(page, mode, activeFilter)}
+          className="mt-4 rounded-2xl bg-[#C02A09] px-6 py-3"
+        >
+          <Text className="font-bold text-white">Réessayer</Text>
+        </Pressable>
+      </View>
+    );
+
+    return (
+      <View className="mt-16 items-center rounded-3xl bg-white/70 p-6">
+        <Text className="text-3xl">😴</Text>
+        <Text className="mt-2 text-base font-bold text-slate-900">Aucun Pokémon trouvé</Text>
+        <Text className="mt-1 text-center text-sm text-slate-500">
+          Essaie un autre filtre ou une autre recherche.
+        </Text>
+      </View>
+    );
+  };
+
+  const renderFooter = () => (
+    <View className="mt-6">
+      <View className="flex-row items-center justify-between rounded-3xl border border-[#E8E3C8] bg-white/80 px-4 py-3">
+        <Pressable
+          onPress={() => goToPage(page - 1)}
+          disabled={page === 1 || loading}
+          className={`rounded-2xl px-5 py-3 ${page === 1 || loading ? 'bg-slate-100' : 'bg-[#FFCB05]'}`}
+        >
+          <Text className={`font-bold ${page === 1 || loading ? 'text-slate-400' : 'text-slate-900'}`}>
+            ← Préc.
+          </Text>
+        </Pressable>
+
+        <View className="items-center">
+          <Text className="text-sm font-black text-slate-700">{page} / {totalPages}</Text>
+          <Text className="text-[10px] text-slate-400">{totalCount} cartes</Text>
+        </View>
+
+        <Pressable
+          onPress={() => goToPage(page + 1)}
+          disabled={page === totalPages || loading}
+          className={`rounded-2xl px-5 py-3 ${page === totalPages || loading ? 'bg-slate-100' : 'bg-[#FFCB05]'}`}
+        >
+          <Text className={`font-bold ${page === totalPages || loading ? 'text-slate-400' : 'text-slate-900'}`}>
+            Suiv. →
+          </Text>
+        </Pressable>
       </View>
     </View>
   );
-}
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#0a0a12',
-  },
-  header: {
-    paddingTop: 56,
-    paddingHorizontal: 24,
-    paddingBottom: 20,
-    alignItems: 'center',
-    gap: 6,
-  },
-  headerRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-  },
-  pokeball: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: '#e53935',
-    borderWidth: 2.5,
-    borderColor: '#222',
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: '#e53935',
-    shadowOpacity: 0.7,
-    shadowRadius: 10,
-    elevation: 8,
-  },
-  pokeballCenter: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-    backgroundColor: '#fff',
-    borderWidth: 1.5,
-    borderColor: '#222',
-  },
-  title: {
-    fontFamily: 'serif',
-    fontSize: 26,
-    fontWeight: '900',
-    color: '#f0c040',
-    letterSpacing: 1,
-  },
-  subtitle: {
-    fontSize: 9,
-    color: '#6b6b88',
-    letterSpacing: 3,
-    marginTop: 2,
-  },
-  statsBar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 20,
-    marginTop: 12,
-  },
-  stat: {
-    alignItems: 'center',
-    gap: 2,
-  },
-  statValue: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: '#f0c040',
-  },
-  statLabel: {
-    fontSize: 9,
-    color: '#6b6b88',
-    letterSpacing: 2,
-  },
-  statDivider: {
-    width: 1,
-    height: 28,
-    backgroundColor: '#f0c04022',
-  },
-  divider: {
-    height: 1,
-    marginHorizontal: 24,
-    backgroundColor: '#a8842a55',
-    marginBottom: 16,
-  },
-  grid: {
-    paddingHorizontal: 16,
-    paddingBottom: 40,
-  },
-  row: {
-    justifyContent: 'space-between',
-    marginBottom: 16,
-  },
-  card: {
-    width: '48%',
-  },
-  cardInner: {
-    backgroundColor: '#1a1a2e',
-    borderRadius: 14,
-    borderWidth: 1,
-    padding: 12,
-    alignItems: 'center',
-    gap: 8,
-    shadowColor: '#000',
-    shadowOpacity: 0.4,
-    shadowRadius: 8,
-    elevation: 5,
-  },
-  imgWrap: {
-    width: '100%',
-    height: 180,
-    borderRadius: 8,
-    backgroundColor: '#1e1e30',
-    overflow: 'hidden',
-    position: 'relative',
-  },
-  image: {
-    width: '100%',
-    height: '100%',
-  },
-  qtyBadge: {
-    position: 'absolute',
-    top: 6,
-    right: 6,
-    backgroundColor: 'rgba(0,0,0,0.75)',
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#a8842a',
-    paddingHorizontal: 7,
-    paddingVertical: 2,
-  },
-  qtyText: {
-    fontSize: 10,
-    fontWeight: '700',
-    color: '#f0c040',
-  },
-  cardName: {
-    fontSize: 11,
-    fontWeight: '800',
-    color: '#e8e8f0',
-    textAlign: 'center',
-    letterSpacing: 0.5,
-  },
-  rarityBadge: {
-    borderRadius: 20,
-    borderWidth: 1,
-    paddingHorizontal: 10,
-    paddingVertical: 3,
-  },
-  rarityText: {
-    fontSize: 8,
-    fontWeight: '700',
-    letterSpacing: 1.5,
-  },
-  illustrator: {
-    fontSize: 9,
-    color: '#6b6b88',
-    textAlign: 'center',
-  },
-  pagination: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-    gap: 16,
-    paddingVertical: 20,
-  },
-  pageBtn: {
-    backgroundColor: '#1a1a2e',
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: '#f0c04055',
-    paddingHorizontal: 18,
-    paddingVertical: 10,
-  },
-  pageBtnDisabled: {
-    borderColor: '#333',
-    opacity: 0.4,
-  },
-  pageBtnText: {
-    color: '#f0c040',
-    fontSize: 12,
-    fontWeight: '700',
-    letterSpacing: 1,
-  },
-  pageBtnTextDisabled: {
-    color: '#666',
-  },
-  pageInfo: {
-    color: '#e8e8f0',
-    fontSize: 14,
-    fontWeight: '700',
-  },
-});
+  return (
+    <View className="flex-1 bg-[#F5F0DC]">
+      <StatusBar barStyle="dark-content" />
+
+      <FlatList
+        ref={listRef}
+        data={visiblePokemons}
+        keyExtractor={(item) => item.id.toString()}
+        numColumns={2}
+        columnWrapperStyle={{ gap: 12 }}
+        contentContainerStyle={{ padding: 16, paddingBottom: 40 }}
+        ItemSeparatorComponent={() => <View className="h-3" />}
+        ListHeaderComponent={headerElement}   
+        ListEmptyComponent={renderEmpty}
+        ListFooterComponent={renderFooter}
+        renderItem={renderPokemon}
+        style={{ opacity: loading ? 0.6 : 1 }}
+      />
+    </View>
+  );
+}

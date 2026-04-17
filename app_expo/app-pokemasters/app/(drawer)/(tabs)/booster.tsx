@@ -13,7 +13,7 @@ import {
 } from 'react-native';
 import { useAuth } from '@/context/AuthContext';
 import { apiFetch } from '@/services/api';
-import { Int32 } from 'react-native/Libraries/Types/CodegenTypes';
+
 
 interface Card {
   name: string;

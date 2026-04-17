@@ -62,6 +62,14 @@ export function useAuth() {
 const TOKEN_KEY = "auth_token";
 const REFRESH_KEY = "google_refresh_token";
 
+function extractError(data: any): string {
+  if (Array.isArray(data?.detail)) {
+    return data.detail.map((e: any) => e.msg).join(", ");
+  }
+  if (typeof data?.detail === "string") return data.detail;
+  return "Une erreur est survenue.";
+}
+
 function decodeJwt(token: string) {
   try {
     const base64Url = token.split(".")[1];
@@ -163,7 +171,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const data = await res.json();
 
         if (!res.ok) {
-          return data.detail || "Login failed.";
+          return extractError(data); 
         }
 
         setToken(data.token);
@@ -184,13 +192,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const res = await fetch(`${API_BASE_URL}/api/auth/register`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ email, password, name }),
+          body: JSON.stringify({ email, pseudo: name, name: name, password }),
         });
 
         const data = await res.json();
 
         if (!res.ok) {
-          return data.detail || "Registration failed.";
+          return extractError(data); 
         }
 
         setToken(data.token);

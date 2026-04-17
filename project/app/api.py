@@ -1,14 +1,15 @@
-import uuid
-import random
-from ninja import NinjaAPI, Schema
-from typing import List
 from django.contrib.auth.hashers import make_password, check_password
+from .authentification import GoogleJWTAuth, create_app_jwt
+from .models import Card, User, PlayerCard
+from ninja.pagination import paginate
+from ninja import NinjaAPI, Schema
 from django.db import transaction
 from django.db.models import F
-from .models import Card, User, PlayerCard
-from .authentification import GoogleJWTAuth, create_app_jwt
-from ninja.pagination import paginate
 from typing import Optional
+from typing import List
+
+import random
+import uuid
 
 jwt_auth = GoogleJWTAuth()
 
@@ -32,11 +33,13 @@ class RegisterIn(Schema):
     email: str
     password: str
     name: str
+    pseudo: str
 
 
 class LoginIn(Schema):
     email: str
     password: str
+    pseudo: str
 
 
 class TokenOut(Schema):
@@ -46,6 +49,7 @@ class TokenOut(Schema):
 
 class ErrorOut(Schema):
     detail: str
+
 
 class PlayerCardSchema(Schema):
     id: int
@@ -65,9 +69,11 @@ class BoosterCardOut(Schema):
     rarity: str
     illustrator: str
 
+
 class BoosterCountOut(Schema):
     cards: list[BoosterCardOut]
     booster_count: int
+
 
 @api.get("/hello")
 def hello(request):
@@ -100,11 +106,16 @@ def get_me(request):
 
     return user
 
-@api.get("/player/card", auth=jwt_auth, response={200: List[PlayerCardSchema], 400: ErrorOut})
+
+@api.get(
+    "/player/card", auth=jwt_auth, response={200: List[PlayerCardSchema], 400: ErrorOut}
+)
 def view_card(request):
     claims = request.auth_user
     user_id = claims["sub"]
-    queryset = PlayerCard.objects.select_related('card').filter(card_user__user_id=user_id)
+    queryset = PlayerCard.objects.select_related("card").filter(
+        card_user__user_id=user_id
+    )
     data = [
         {
             "id": pc.id,
@@ -124,10 +135,11 @@ def view_card(request):
 def register(request, payload: RegisterIn):
     """Register a new user with email and password."""
     email = payload.email.strip().lower()
+    pseudo = payload.pseudo.strip()
     name = payload.name.strip()
     password = payload.password
 
-    if not email or not name or not password:
+    if not email or not name or not password or not pseudo:
         return 400, {"detail": "All fields are required."}
 
     if len(password) < 6:
@@ -136,8 +148,11 @@ def register(request, payload: RegisterIn):
         existing = User.objects.get(email=email)
         if existing.password:
             return 409, {"detail": "An account with this email already exists."}
+        if User.objects.filter(pseudo_iexact=pseudo).exists():
+            return 409, {"detail": "This pseudo is already taken."}
         existing.password = make_password(password)
         existing.name = name
+        existing.pseudo = pseudo
         existing.save()
         token = create_app_jwt(existing)
         return 201, {"token": token, "user": existing}
@@ -147,6 +162,7 @@ def register(request, payload: RegisterIn):
     user = User.objects.create(
         user_id=f"local_{uuid.uuid4().hex[:16]}",
         name=name,
+        pseudo=pseudo,
         email=email,
         password=make_password(password),
     )
@@ -154,17 +170,21 @@ def register(request, payload: RegisterIn):
     return 201, {"token": token, "user": user}
 
 
-@api.post("/auth/login", response={200: TokenOut, 401: ErrorOut})
+@api.post("/auth/login", response={200: TokenOut, 401: ErrorOut, 400: ErrorOut})
 def login(request, payload: LoginIn):
     """Login with email and password."""
     email = payload.email.strip().lower()
+    password = payload.password
+
+    if not email or not password:
+        return 400, {"detail": "Email and password are required."}
 
     try:
         user = User.objects.get(email=email)
     except User.DoesNotExist:
         return 401, {"detail": "Invalid email or password."}
 
-    if not user.password or not check_password(payload.password, user.password):
+    if not user.password or not check_password(password, user.password):
         return 401, {"detail": "Invalid email or password."}
 
     token = create_app_jwt(user)
@@ -253,10 +273,59 @@ def open_booster(request):
         "booster_count": user.booster_count,
     }
 
-@api.get('/user/pagination', response={200: list[CardsOut], 404: ErrorOut, 500: TokenOut})
+
+@api.get("/user/pagination", response=List[PlayerCardSchema], auth=jwt_auth)
 @paginate
-def pagination(request):
-        return Card.objects.all()
+def pagination(request, rarity: Optional[str] = None):
+    claims = request.auth_user
+    user_id = claims["sub"]
+    owned = {
+        pc.card_id: pc.quantity
+        for pc in PlayerCard.objects.filter(card_user__user_id=user_id)
+    }
+
+    queryset = Card.objects.all()
+    if rarity:
+        queryset = queryset.filter(rarity__icontains=rarity)
+
+    return [
+        {
+            "id": card.id,
+            "name": card.name,
+            "image": card.image,
+            "category": card.category,
+            "rarity": card.rarity,
+            "illustrator": card.illustrator,
+            "quantity": owned.get(card.id, 0),
+        }
+        for card in queryset
+    ]
+
+
+@api.get("/user/collection/pagination", response=List[PlayerCardSchema], auth=jwt_auth)
+@paginate
+def collection_pagination(request, rarity: Optional[str] = None):
+    claims = request.auth_user
+    user_id = claims["sub"]
+
+    queryset = PlayerCard.objects.select_related("card").filter(
+        card_user__user_id=user_id
+    )
+    if rarity:
+        queryset = queryset.filter(card__rarity__icontains=rarity)
+
+    return [
+        {
+            "id": pc.card.id,
+            "name": pc.card.name,
+            "image": pc.card.image,
+            "category": pc.card.category,
+            "rarity": pc.card.rarity,
+            "illustrator": pc.card.illustrator,
+            "quantity": pc.quantity,
+        }
+        for pc in queryset
+    ]
 
 
 @api.get("/cards", response=List[CardsOut])

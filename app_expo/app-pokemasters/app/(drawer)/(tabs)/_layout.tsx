@@ -2,7 +2,7 @@ import { Ionicons, MaterialIcons } from '@expo/vector-icons';
 import { StatusBar } from 'expo-status-bar';
 import { Tabs } from 'expo-router';
 import { View } from 'react-native';
-import FloatingUserMenu from '@/components/FloattingMenu';
+import FloatingUserMenu from '@/components/login_components/FloattingMenu';
 
 export default function TabsLayout() {
   return (
@@ -34,6 +34,7 @@ export default function TabsLayout() {
           name="index"
           options={{
             headerTitle: 'Menu',
+            headerShown: false,
             headerLeft: () => <></>,
             tabBarLabel: 'Accueil',
             tabBarIcon: ({ focused, color }) => (
@@ -50,6 +51,7 @@ export default function TabsLayout() {
           name="booster"
           options={{
             headerTitle: 'Jouer',
+            headerShown: false,
             tabBarLabel: 'Jouer',
             tabBarIcon: ({ focused, color }) => (
               <Ionicons
@@ -69,6 +71,7 @@ export default function TabsLayout() {
           name="pokedex"
           options={{
             headerTitle: 'Pokedex',
+            headerShown: false, 
             tabBarLabel: 'Pokedex',
             tabBarIcon: ({ color }) => (
               <MaterialIcons
@@ -86,6 +89,7 @@ export default function TabsLayout() {
             tabBarButton: () => <FloatingUserMenu />,
           }}
         />
+
       </Tabs>
     </View>
   );
