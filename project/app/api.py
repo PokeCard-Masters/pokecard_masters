@@ -74,6 +74,10 @@ class BoosterCountOut(Schema):
     cards: list[BoosterCardOut]
     booster_count: int
 
+class ChangePasswordIn(Schema):
+    current_password: str
+    new_password: str
+
 
 @api.get("/hello")
 def hello(request):
@@ -189,6 +193,31 @@ def login(request, payload: LoginIn):
 
     token = create_app_jwt(user)
     return 200, {"token": token, "user": user}
+
+
+@api.post("/auth/change-password", auth=jwt_auth, response={200: ErrorOut, 400: ErrorOut, 401: ErrorOut})
+def change_password(request, payload: ChangePasswordIn):
+    claims = request.auth_user
+    user_id = claims["sub"]
+ 
+    try:
+        user = User.objects.get(user_id=user_id)
+    except User.DoesNotExist:
+        return 401, {"detail": "Utilisateur introuvable."}
+ 
+    if not check_password(payload.current_password, user.password):
+        return 401, {"detail": "Mot de passe actuel incorrect."}
+ 
+    if len(payload.new_password) < 8:
+        return 400, {"detail": "Le nouveau mot de passe doit faire au moins 8 caractères."}
+ 
+    if payload.current_password == payload.new_password:
+        return 400, {"detail": "Le nouveau mot de passe doit être différent de l'actuel."}
+ 
+    user.password = make_password(payload.new_password)
+    user.save()
+ 
+    return 200, {"detail": "Mot de passe modifié avec succès."}
 
 
 RARITY_TIERS = {
