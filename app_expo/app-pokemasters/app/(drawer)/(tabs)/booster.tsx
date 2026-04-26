@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   ActivityIndicator,
   Animated,
@@ -52,6 +52,14 @@ const PokemonBoosterOpener = () => {
   const [showCards, setShowCards] = useState(false);
   const [fadeAnim] = useState(new Animated.Value(0));
   const [boosterCount, setBoosterCount] = useState(0);
+
+  useEffect(() => {
+    if (!token) return;
+    apiFetch('/api/booster/count', token)
+      .then(res => res.ok ? res.json() : null)
+      .then(data => { if (data) setBoosterCount(data.booster_count); })
+      .catch(() => {});
+  }, [token]);
 
   const openBooster = async () => {
     if (!token) return;
