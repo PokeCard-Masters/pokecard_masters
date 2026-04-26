@@ -57,7 +57,7 @@ export default function FloatingUserMenu() {
   const [loadingStats, setLoadingStats] = useState(false);
 
   const menuItems: MenuItem[] = [
-    { label: 'Profil dresseur', icon: 'person-outline', route: '/profile' as Href },
+    { label: 'Profil dresseur', icon: 'person-outline', route: '/profil' as Href },
     { label: 'Paramètres', icon: 'settings-outline', route: '/settings' as Href },
   ];
 

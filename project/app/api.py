@@ -78,6 +78,26 @@ class ChangePasswordIn(Schema):
     current_password: str
     new_password: str
 
+class TrophyOut(Schema):
+    key: str
+    label: str
+    emoji: str
+    count: int
+    tier: Optional[str]      # None | 'bronze' | 'silver' | 'gold' | 'platinum'
+    next_tier: Optional[str]
+    next_threshold: Optional[int]
+    progress: float          # 0.0 → 1.0 vers le prochain palier
+ 
+ 
+class ProfilOut(Schema):
+    name: str
+    email: str
+    boosters_opened: int
+    cards_owned: int
+    unique_cards: int
+    type_trophies: List[TrophyOut]
+    category_trophies: List[TrophyOut]
+
 
 @api.get("/hello")
 def hello(request):
@@ -376,3 +396,151 @@ def get_cards(request, types: Optional[str] = None):
     if types:
         cards = cards.filter(types__icontains=types)
     return cards
+
+TYPE_THRESHOLDS = [
+    ('bronze',   25),
+    ('silver',   50),
+    ('gold',    100),
+    ('platinum', 200),
+]
+ 
+CATEGORY_THRESHOLDS = [
+    ('bronze',    50),
+    ('silver',   100),
+    ('gold',     200),
+    ('platinum', 400),
+]
+ 
+TIER_LABELS = {
+    'bronze':   'Bronze',
+    'silver':   'Argent',
+    'gold':     'Or',
+    'platinum': 'Platine',
+}
+ 
+TYPE_EMOJIS = {
+    'Fire':     '🔥',
+    'Water':    '💧',
+    'Grass':    '🌿',
+    'Lightning': '⚡',
+    'Psychic':  '🔮',
+    'Fighting': '🥊',
+    'Darkness':     '🌑',
+    'Metal':    '⚙️',
+    'Dragon':   '🐉',
+    'Fairy':    '🌸',
+    'Colorless':   '⭐',
+}
+ 
+CATEGORY_EMOJIS = {
+    'Pokemon':         '🐦‍🔥',
+    'Trainer':         '🧢',
+    'Energy':          '✨',
+}
+ 
+ 
+def compute_trophy(key: str, label: str, emoji: str, count: int, thresholds: list) -> dict:
+    """Calcule le palier actuel, le suivant et la progression."""
+    current_tier = None
+    next_tier = None
+    next_threshold = None
+    progress = 0.0
+ 
+    for tier_name, threshold in thresholds:
+        if count >= threshold:
+            current_tier = tier_name
+ 
+    # Prochain palier
+    for tier_name, threshold in thresholds:
+        if count < threshold:
+            next_tier = tier_name
+            next_threshold = threshold
+            break
+ 
+    # Calcul de la progression vers le prochain palier
+    if next_threshold is not None:
+        # Trouver le seuil du palier actuel (ou 0)
+        prev_threshold = 0
+        for tier_name, threshold in thresholds:
+            if tier_name == current_tier:
+                prev_threshold = threshold
+                break
+        span = next_threshold - prev_threshold
+        progress = min((count - prev_threshold) / span, 1.0) if span > 0 else 1.0
+    else:
+        progress = 1.0  # Platine atteint
+ 
+    return {
+        'key': key,
+        'label': label,
+        'emoji': emoji,
+        'count': count,
+        'tier': current_tier,
+        'next_tier': next_tier,
+        'next_threshold': next_threshold,
+        'progress': round(progress, 3),
+    }
+ 
+ 
+@api.get("/profil", auth=jwt_auth, response={200: ProfilOut, 404: ErrorOut})
+def get_profile(request):
+    claims = request.auth_user
+    user_id = claims["sub"]
+ 
+    try:
+        user = User.objects.get(user_id=user_id)
+    except User.DoesNotExist:
+        return 404, {"detail": "Utilisateur introuvable."}
+ 
+    # Cartes possédées
+    player_cards = PlayerCard.objects.select_related('card').filter(card_user=user)
+ 
+    cards_owned  = sum(pc.quantity for pc in player_cards)
+    unique_cards = player_cards.count()
+ 
+ 
+    # ── Trophées par type ──
+    type_counts: dict[str, int] = {}
+    for pc in player_cards:
+        card_type = pc.card.types  # champ 'type' de ton model Card
+        if card_type:
+            type_counts[card_type] = type_counts.get(card_type, 0) + pc.quantity
+ 
+    type_trophies = [
+        compute_trophy(
+            key=t,
+            label=t,
+            emoji=TYPE_EMOJIS.get(t, '❓'),
+            count=count,
+            thresholds=TYPE_THRESHOLDS,
+        )
+        for t, count in sorted(type_counts.items(), key=lambda x: -x[1])
+    ]
+ 
+    # ── Trophées par catégorie ──
+    category_counts: dict[str, int] = {}
+    for pc in player_cards:
+        cat = pc.card.category
+        if cat:
+            category_counts[cat] = category_counts.get(cat, 0) + pc.quantity
+ 
+    category_trophies = [
+        compute_trophy(
+            key=c,
+            label=c,
+            emoji=CATEGORY_EMOJIS.get(c, '📦'),
+            count=count,
+            thresholds=CATEGORY_THRESHOLDS,
+        )
+        for c, count in sorted(category_counts.items(), key=lambda x: -x[1])
+    ]
+ 
+    return 200, {
+        'name':              user.name,
+        'email':             user.email,
+        'boosters_opened':   user.booster_count,
+        'cards_owned':       cards_owned,
+        'unique_cards':      unique_cards,
+        'type_trophies':     type_trophies,
+        'category_trophies': category_trophies,
+    }

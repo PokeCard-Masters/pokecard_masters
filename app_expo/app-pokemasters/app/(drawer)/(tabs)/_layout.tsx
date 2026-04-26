@@ -99,6 +99,14 @@ export default function TabsLayout() {
           }}
         />
 
+        <Tabs.Screen
+          name="profil"
+          options={{
+            href: null,
+            headerShown: false, 
+            
+          }}
+        />
       </Tabs>
     </View>
   );
