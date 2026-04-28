@@ -3,6 +3,10 @@ from django.http import JsonResponse
 import requests
 from .models import Card
 
+def home_page(request):
+    r = "Bienvenue sur Home Page"
+    return JsonResponse(r, safe=False)
+
 def import_list(request):
     result = Card.objects.all()
     pokemon_list = []

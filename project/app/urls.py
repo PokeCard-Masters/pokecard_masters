@@ -7,4 +7,5 @@ urlpatterns = [
     path("card/", views.card, name="card"),
     path("import/", views.import_api, name="import_api"),
     path("api/", api.urls),
-]
+    path("", views.home_page, name="home_page")
+]   

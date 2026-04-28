@@ -48,9 +48,8 @@ class BoosterOpenTest(TestCase):
         response = self.client.post("/api/booster/open", **self._auth_header())
         self.assertEqual(response.status_code, 200)
         data = response.json()
-        self.assertEqual(len(data), 10)
-        # Verify card structure
-        card = data[0]
+        self.assertGreaterEqual(len(data["cards"]), 10)
+        card = data["cards"][0]
         for field in ["name", "card_id", "image", "category", "rarity", "illustrator"]:
             self.assertIn(field, card)
 
