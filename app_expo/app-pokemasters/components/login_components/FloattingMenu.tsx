@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { Modal, Pressable, Text, View, ActivityIndicator } from 'react-native';
 import { useAuth } from '@/context/AuthContext';
 import { API_BASE_URL } from '@/config/auth';
+import { useTheme } from '@/hooks/useTheme';
 
 type MenuItem = {
   label: string;
@@ -18,21 +19,21 @@ type CollectionStats = {
   secret: number;
 };
 
-const Pokeball = ({ size = 42 }: { size?: number }) => {
+const Pokeball = ({ size = 42, borderColor }: { size?: number; borderColor: string }) => {
   const band = 2;
   const btnSize = size * 0.24;
 
   return (
     <View
-      style={{ width: size, height: size, borderWidth: 2, borderColor: '#1a1a2e' }}
+      style={{ width: size, height: size, borderWidth: 2, borderColor }}
       className="rounded-full overflow-hidden"
     >
       <View style={{ height: size / 2 }} className="bg-[#C02A09]" />
       <View style={{ height: size / 2 }} className="bg-white" />
 
       <View
-        style={{ top: size / 2 - band / 2, height: band }}
-        className="absolute left-0 right-0 bg-[#1a1a2e]"
+        style={{ top: size / 2 - band / 2, height: band, backgroundColor: borderColor }}
+        className="absolute left-0 right-0"
       />
 
       <View
@@ -42,7 +43,7 @@ const Pokeball = ({ size = 42 }: { size?: number }) => {
           top: size / 2 - btnSize / 2,
           left: size / 2 - btnSize / 2,
           borderWidth: 2,
-          borderColor: '#1a1a2e',
+          borderColor,
         }}
         className="absolute rounded-full bg-white"
       />
@@ -55,6 +56,7 @@ export default function FloatingUserMenu() {
   const { user, token, signOut } = useAuth();
   const [stats, setStats] = useState<CollectionStats | null>(null);
   const [loadingStats, setLoadingStats] = useState(false);
+  const theme = useTheme();
 
   const menuItems: MenuItem[] = [
     { label: 'Profil dresseur', icon: 'person-outline', route: '/profile' as Href },
@@ -92,11 +94,7 @@ export default function FloatingUserMenu() {
           secret: dataSecret.count ?? 0,
         });
       } catch {
-        setStats({
-          total: 0,
-          rare: 0,
-          secret: 0,
-        });
+        setStats({ total: 0, rare: 0, secret: 0 });
       } finally {
         setLoadingStats(false);
       }
@@ -122,7 +120,7 @@ export default function FloatingUserMenu() {
         className="flex-1 items-center justify-center m-2"
         style={{ elevation: 4 }}
       >
-        <Pokeball size={38} />
+        <Pokeball size={38} borderColor={theme.border} />
       </Pressable>
 
       <Modal visible={open} transparent animationType="fade">
@@ -136,12 +134,16 @@ export default function FloatingUserMenu() {
             style={{ elevation: 12 }}
             onPress={(e) => e.stopPropagation()}
           >
-            <View className="bg-[#C02A09] px-4 pt-1 pb-4">
-              <View className="h-[3px] bg-[#FFCB05] rounded-full mb-3 -mx-4" />
+            {/* Header */}
+            <View style={{ backgroundColor: theme.primary }} className="px-4 pt-1 pb-4">
+              <View
+                style={{ backgroundColor: theme.accent }}
+                className="h-[3px] rounded-full mb-3 -mx-4"
+              />
 
               <View className="flex-row items-center gap-3">
                 <View className="p-1 rounded-full bg-white/10">
-                  <Pokeball size={42} />
+                  <Pokeball size={42} borderColor={theme.border} />
                 </View>
 
                 <View className="flex-1">
@@ -155,10 +157,14 @@ export default function FloatingUserMenu() {
               </View>
             </View>
 
-            <View className="flex-row bg-[#F5F0DC] border-b border-[#E8E3C8]">
+            {/* Stats */}
+            <View
+              style={{ backgroundColor: theme.surface, borderBottomColor: theme.border }}
+              className="flex-row border-b"
+            >
               {loadingStats ? (
                 <View className="flex-1 items-center justify-center py-3">
-                  <ActivityIndicator size="small" color="#C02A09" />
+                  <ActivityIndicator size="small" color={theme.primary} />
                 </View>
               ) : (
                 [
@@ -168,11 +174,10 @@ export default function FloatingUserMenu() {
                 ].map(({ label, value }, i, arr) => (
                   <View
                     key={label}
-                    className={`flex-1 items-center py-3 ${
-                      i < arr.length - 1 ? 'border-r border-[#E8E3C8]' : ''
-                    }`}
+                    style={i < arr.length - 1 ? { borderRightColor: theme.border, borderRightWidth: 1 } : {}}
+                    className="flex-1 items-center py-3"
                   >
-                    <Text className="text-base font-black text-[#C02A09]">
+                    <Text style={{ color: theme.primary }} className="text-base font-black">
                       {value}
                     </Text>
                     <Text className="text-[10px] font-semibold text-slate-500 mt-0.5">
@@ -183,18 +188,20 @@ export default function FloatingUserMenu() {
               )}
             </View>
 
-            <View className="bg-white px-3 pt-3 gap-1.5">
+            {/* Menu items */}
+            <View style={{ backgroundColor: theme.bg }} className="px-3 pt-3 gap-1.5">
               {menuItems.map((item) => (
                 <Pressable
                   key={String(item.route)}
                   onPress={() => handleMenuPress(item.route)}
-                  className="flex-row items-center rounded-2xl border border-[#E8E3C8] bg-[#FAFAF7] px-3 py-3 active:bg-[#F5F0DC]"
+                  style={{ borderColor: theme.border, backgroundColor: theme.surface }}
+                  className="flex-row items-center rounded-2xl border px-3 py-3"
                 >
                   <View
-                    className="h-8 w-8 items-center justify-center rounded-xl bg-[#FFCB05] mr-3"
-                    style={{ elevation: 1 }}
+                    style={{ backgroundColor: theme.accent, elevation: 1 }}
+                    className="h-8 w-8 items-center justify-center rounded-xl mr-3"
                   >
-                    <Ionicons name={item.icon} size={16} color="#C02A09" />
+                    <Ionicons name={item.icon} size={16} color={theme.primary} />
                   </View>
 
                   <Text className="flex-1 text-sm font-bold text-slate-900">
@@ -202,7 +209,7 @@ export default function FloatingUserMenu() {
                   </Text>
 
                   {item.badge && (
-                    <View className="rounded-full bg-[#FFCB05] px-2 py-0.5 mr-1">
+                    <View style={{ backgroundColor: theme.accent }} className="rounded-full px-2 py-0.5 mr-1">
                       <Text className="text-[9px] font-black text-[#7a5a00]">
                         {item.badge}
                       </Text>
@@ -214,7 +221,8 @@ export default function FloatingUserMenu() {
               ))}
             </View>
 
-            <View className="bg-white px-3 pt-1.5 pb-3">
+            {/* Déconnexion */}
+            <View style={{ backgroundColor: theme.bg }} className="px-3 pt-1.5 pb-3">
               <Pressable
                 onPress={handleLogout}
                 className="flex-row items-center rounded-2xl border border-red-100 bg-red-50 px-3 py-3 active:bg-red-100"
