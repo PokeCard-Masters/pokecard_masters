@@ -24,7 +24,7 @@ class User(models.Model):
     email = models.EmailField(max_length=200, unique=True)
     last_booster_opened = models.DateField(null=True, blank=True)
     booster_count = models.IntegerField(default=0)
-
+    region = models.CharField(max_length=50, default='Kanto')
 
 class Rarity_Card(models.Model):
     order_rarity = [
@@ -46,6 +46,8 @@ class PlayerCard(models.Model):
     )
     card = models.ForeignKey(Card, on_delete=models.CASCADE)
     quantity = models.IntegerField(default=1)
+    updated_at = models.DateTimeField(auto_now=True)
+
 
 
 class CardSet(models.Model):
