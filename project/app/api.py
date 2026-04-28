@@ -15,6 +15,31 @@ jwt_auth = GoogleJWTAuth()
 
 api = NinjaAPI(auth=None)
 
+class UpdateRegionIn(Schema):
+    region: str
+
+class UserProfileOut(Schema):
+    id: int
+    name: str
+    email: str
+    region: str
+
+class StatsOut(Schema):
+    total_owned: int
+    rare_count: int
+    booster_count: int
+    total_cards: int
+    unique_owned: int
+
+
+class RecentCardOut(Schema):
+    name: str
+    card_id: str
+    image: str
+    rarity: str
+    category: str | None
+    illustrator: str | None
+
 
 class CardsOut(Schema):
     id: int
@@ -73,6 +98,7 @@ class BoosterCardOut(Schema):
 class BoosterCountOut(Schema):
     cards: list[BoosterCardOut]
     booster_count: int
+
 
 class ChangePasswordIn(Schema):
     current_password: str
@@ -195,28 +221,36 @@ def login(request, payload: LoginIn):
     return 200, {"token": token, "user": user}
 
 
-@api.post("/auth/change-password", auth=jwt_auth, response={200: ErrorOut, 400: ErrorOut, 401: ErrorOut})
+@api.post(
+    "/auth/change-password",
+    auth=jwt_auth,
+    response={200: ErrorOut, 400: ErrorOut, 401: ErrorOut},
+)
 def change_password(request, payload: ChangePasswordIn):
     claims = request.auth_user
     user_id = claims["sub"]
- 
+
     try:
         user = User.objects.get(user_id=user_id)
     except User.DoesNotExist:
         return 401, {"detail": "Utilisateur introuvable."}
- 
+
     if not check_password(payload.current_password, user.password):
         return 401, {"detail": "Mot de passe actuel incorrect."}
- 
+
     if len(payload.new_password) < 8:
-        return 400, {"detail": "Le nouveau mot de passe doit faire au moins 8 caractères."}
- 
+        return 400, {
+            "detail": "Le nouveau mot de passe doit faire au moins 8 caractères."
+        }
+
     if payload.current_password == payload.new_password:
-        return 400, {"detail": "Le nouveau mot de passe doit être différent de l'actuel."}
- 
+        return 400, {
+            "detail": "Le nouveau mot de passe doit être différent de l'actuel."
+        }
+
     user.password = make_password(payload.new_password)
     user.save()
- 
+
     return 200, {"detail": "Mot de passe modifié avec succès."}
 
 
@@ -236,7 +270,11 @@ RARE_WEIGHTS = {
 }
 
 
-@api.post("/booster/open", auth=jwt_auth, response={200: BoosterCountOut, 404: ErrorOut, 500: ErrorOut})
+@api.post(
+    "/booster/open",
+    auth=jwt_auth,
+    response={200: BoosterCountOut, 404: ErrorOut, 500: ErrorOut},
+)
 def open_booster(request):
     claims = request.auth_user
     user_id = claims["sub"]
@@ -363,3 +401,94 @@ def get_cards(request, types: Optional[str] = None):
     if types:
         cards = cards.filter(types__icontains=types)
     return cards
+
+
+RARE_RARITIES = {
+    "One Star",
+    "Two Star",
+    "Three Star",
+    "Two Shiny",
+    "Crown",
+    "One Shiny",
+}
+
+
+@api.get("/stats", auth=jwt_auth, response=StatsOut)
+def get_stats(request):
+    claims = request.auth_user
+    user_id = claims["sub"]
+
+    try:
+        user = User.objects.get(user_id=user_id)
+    except User.DoesNotExist:
+        return {
+            "total_owned": 0,
+            "rare_count": 0,
+            "booster_count": 0,
+            "total_cards": 0,
+            "unique_owned": 0,
+        }
+
+    player_cards = PlayerCard.objects.select_related("card").filter(card_user=user)
+
+    total_owned = sum(pc.quantity for pc in player_cards)
+    unique_owned = player_cards.count()
+    rare_count = sum(
+        pc.quantity for pc in player_cards if pc.card.rarity in RARE_RARITIES
+    )
+    total_cards = Card.objects.count()
+
+    return {
+        "total_owned": total_owned,
+        "rare_count": rare_count,
+        "booster_count": user.booster_count,
+        "total_cards": total_cards,
+        "unique_owned": unique_owned,
+    }
+
+
+@api.get("/recent", auth=jwt_auth, response=List[RecentCardOut])
+def get_recent_cards(request):
+    claims = request.auth_user
+    user_id = claims["sub"]
+
+    recent = (
+        PlayerCard.objects.select_related("card")
+        .filter(card_user__user_id=user_id)
+        .order_by("-updated_at")[
+            :5
+        ]
+    )
+
+    return [
+        {
+            "name": pc.card.name,
+            "card_id": pc.card.card_id,
+            "image": pc.card.image,
+            "rarity": pc.card.rarity or "",
+            "category": pc.card.category,
+            "illustrator": pc.card.illustrator,
+        }
+        for pc in recent
+    ]
+
+VALID_REGIONS = {
+    'Kanto', 'Johto', 'Hoenn', 'Sinnoh',
+    'Unova', 'Kalos', 'Alola', 'Galar', 'Paldea'
+}
+
+@api.get("/me/profile", auth=jwt_auth, response=UserProfileOut)
+def get_profile(request):
+    claims = request.auth_user
+    user = User.objects.get(user_id=claims["sub"])
+    return user
+
+@api.patch("/me/region", auth=jwt_auth, response={200: UserProfileOut, 400: ErrorOut})
+def update_region(request, payload: UpdateRegionIn):
+    if payload.region not in VALID_REGIONS:
+        return 400, {"detail": "Région invalide."}
+    claims = request.auth_user
+    user = User.objects.get(user_id=claims["sub"])
+    user.region = payload.region
+    user.save()
+    return 200, user

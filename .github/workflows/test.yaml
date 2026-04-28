@@ -1,0 +1,40 @@
+name: Unit test
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: ${{ secrets.MYSQL_PASSWORD }}
+          MYSQL_DATABASE: pokecard_test
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping --silent"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=10
+    env:
+      DJANGO_SECRET_KEY: ${{ secrets.DJANGO_SECRET_KEY }}
+      DATABASE_NAME: pokecard_test
+      DATABASE_USER: root
+      DATABASE_PASSWORD: ${{ secrets.MYSQL_PASSWORD }}
+    defaults:
+      run:
+        working-directory: project
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install MySQL client build deps
+        run: sudo apt-get update && sudo apt-get install -y default-libmysqlclient-dev pkg-config build-essential
+        working-directory: .
+      - uses: astral-sh/setup-uv@v3
+      - run: uv python install
+      - run: uv sync --dev
+      - run: uv run ./manage.py test --noinput

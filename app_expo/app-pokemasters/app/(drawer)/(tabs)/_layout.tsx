@@ -82,14 +82,12 @@ export default function TabsLayout() {
             ),
           }}
         />
-
         <Tabs.Screen
           name="drawer-btn"
           options={{
             tabBarButton: () => <FloatingUserMenu />,
           }}
         />
-
         <Tabs.Screen
           name="settings"
           options={{
@@ -98,7 +96,6 @@ export default function TabsLayout() {
             
           }}
         />
-
       </Tabs>
     </View>
   );
