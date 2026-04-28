@@ -1,12 +1,13 @@
 from django.contrib.auth.hashers import make_password, check_password
 from .authentification import GoogleJWTAuth, create_app_jwt
 from .models import Card, User, PlayerCard
-from ninja.pagination import paginate
 from ninja import NinjaAPI, Schema
 from django.db import transaction
-from django.db.models import F
+from django.db.models import F, OuterRef, Subquery, IntegerField, Value
+from django.db.models.functions import Coalesce
 from typing import Optional
 from typing import List
+from django.core.paginator import Paginator
 
 import random
 import uuid
@@ -64,7 +65,6 @@ class RegisterIn(Schema):
 class LoginIn(Schema):
     email: str
     password: str
-    pseudo: str
 
 
 class TokenOut(Schema):
@@ -340,38 +340,49 @@ def open_booster(request):
         "booster_count": user.booster_count,
     }
 
+@api.get("/booster/count", auth=jwt_auth, response={200: dict})
+def booster_count(request):
+    claims = request.auth_user
+    user = User.objects.get(user_id=claims["sub"])
+    return {"booster_count": user.booster_count}
 
-@api.get("/user/pagination", response=List[PlayerCardSchema], auth=jwt_auth)
-@paginate
-def pagination(request, rarity: Optional[str] = None):
+@api.get("/user/pagination", auth=jwt_auth)
+def pagination(request, page: int = 1, limit: int = 10, rarity: Optional[str] = None):
     claims = request.auth_user
     user_id = claims["sub"]
-    owned = {
-        pc.card_id: pc.quantity
-        for pc in PlayerCard.objects.filter(card_user__user_id=user_id)
-    }
 
-    queryset = Card.objects.all()
+    quantity_subquery = PlayerCard.objects.filter(
+        card_user__user_id=user_id,
+        card=OuterRef('pk')
+    ).values('quantity')[:1]
+
+    queryset = Card.objects.annotate(
+        quantity=Coalesce(
+            Subquery(quantity_subquery, output_field=IntegerField()),
+            Value(0)
+        )
+    )
     if rarity:
         queryset = queryset.filter(rarity__icontains=rarity)
 
-    return [
-        {
-            "id": card.id,
-            "name": card.name,
-            "image": card.image,
-            "category": card.category,
-            "rarity": card.rarity,
-            "illustrator": card.illustrator,
-            "quantity": owned.get(card.id, 0),
-        }
-        for card in queryset
-    ]
+    paginator = Paginator(queryset, limit)
+    page_obj = paginator.get_page(page)
+
+    return {
+        "items": [
+            {
+                "id": card.id, "name": card.name, "image": card.image,
+                "category": card.category, "rarity": card.rarity,
+                "illustrator": card.illustrator, "quantity": card.quantity,
+            }
+            for card in page_obj
+        ],
+        "count": paginator.count,
+    }
 
 
-@api.get("/user/collection/pagination", response=List[PlayerCardSchema], auth=jwt_auth)
-@paginate
-def collection_pagination(request, rarity: Optional[str] = None):
+@api.get("/user/collection/pagination", auth=jwt_auth)
+def collection_pagination(request, page: int = 1, limit: int = 10, rarity: Optional[str] = None):
     claims = request.auth_user
     user_id = claims["sub"]
 
@@ -381,18 +392,20 @@ def collection_pagination(request, rarity: Optional[str] = None):
     if rarity:
         queryset = queryset.filter(card__rarity__icontains=rarity)
 
-    return [
-        {
-            "id": pc.card.id,
-            "name": pc.card.name,
-            "image": pc.card.image,
-            "category": pc.card.category,
-            "rarity": pc.card.rarity,
-            "illustrator": pc.card.illustrator,
-            "quantity": pc.quantity,
-        }
-        for pc in queryset
-    ]
+    paginator = Paginator(queryset, limit)
+    page_obj = paginator.get_page(page)
+
+    return {
+        "items": [
+            {
+                "id": pc.card.id, "name": pc.card.name, "image": pc.card.image,
+                "category": pc.card.category, "rarity": pc.card.rarity,
+                "illustrator": pc.card.illustrator, "quantity": pc.quantity,
+            }
+            for pc in page_obj
+        ],
+        "count": paginator.count,
+    }
 
 
 @api.get("/cards", response=List[CardsOut])
