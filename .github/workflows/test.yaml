@@ -1,18 +1,19 @@
-name : Unit test
+name: Unit test
 
 on:
   push:
-    branches: ["test_training"]
+    branches: [main]
   pull_request:
-    branches: ["test_training"]
 
 jobs:
   build:
     runs-on: ubuntu-latest
-
+    defaults:
+      run:
+        working-directory: project
     steps:
-    -uses: actions/checkout@v4
-    -uses: astral-sh/setup-uv@v3
-    -run: uv python install
-    -run: uv sync --dev
-    -run: cd pokecard_masters/project && uv run ./manage.py test --noinput
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v3
+      - run: uv python install
+      - run: uv sync --dev
+      - run: uv run ./manage.py test --noinput
