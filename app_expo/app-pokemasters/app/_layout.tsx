@@ -5,6 +5,8 @@ import { useEffect } from "react";
 import { useColorScheme } from "react-native";
 import { AuthProvider, useAuth } from "@/context/AuthContext";
 
+import { RegionProvider } from '@/context/RegionContext';
+
 import "react-native-reanimated";
 import '../global.css';
 
@@ -49,7 +51,9 @@ export default function RootLayout() {
   return (
     <ThemeProvider value={colorScheme === "dark" ? DarkTheme : DefaultTheme}>
       <AuthProvider>
+        <RegionProvider>
         <RootNavigator />
+        </RegionProvider>
       </AuthProvider>
       <StatusBar style="auto" />
     </ThemeProvider>

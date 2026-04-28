@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
+  ActivityIndicator,
   Animated,
   Easing,
   Pressable,
@@ -8,10 +9,10 @@ import {
   Text,
   TextInput,
   View,
-  ActivityIndicator,
   useWindowDimensions,
 } from 'react-native';
 import { useAuth } from '@/context/AuthContext';
+import { useTheme } from '@/hooks/useTheme';
 import { apiFetch } from '@/services/api';
 
 type Field = 'current' | 'new' | 'confirm';
@@ -32,11 +33,11 @@ function StrengthBar({ password }: { password: string }) {
     /[^A-Za-z0-9]/.test(password),
   ].filter(Boolean).length;
 
-  const levels: { label: string; color: string; track: string }[] = [
-    { label: 'Très faible', color: '#ef4444', track: '#fee2e2' },
-    { label: 'Faible',      color: '#f97316', track: '#ffedd5' },
-    { label: 'Moyen',       color: '#f59e0b', track: '#fef3c7' },
-    { label: 'Fort',        color: '#22c55e', track: '#dcfce7' },
+  const levels: { label: string; color: string }[] = [
+    { label: 'Très faible', color: '#ef4444' },
+    { label: 'Faible', color: '#f97316' },
+    { label: 'Moyen', color: '#f59e0b' },
+    { label: 'Fort', color: '#22c55e' },
   ];
 
   const current = levels[score - 1] ?? levels[0];
@@ -49,7 +50,7 @@ function StrengthBar({ password }: { password: string }) {
             key={i}
             style={{
               flex: 1, height: 4, borderRadius: 99,
-              backgroundColor: i < score ? current.color : '#E8E3C8',
+              backgroundColor: i < score ? current.color : '#E2E8F0',
             }}
           />
         ))}
@@ -74,14 +75,14 @@ function PasswordField({
   match?: boolean | null;
 }) {
   const borderColor =
-    match === true  ? '#86efac' :
-    match === false ? '#fca5a5' :
-    '#E8E3C8';
+    match === true ? '#86efac' :
+      match === false ? '#fca5a5' :
+        '#E2E8F0';
 
   const bgColor =
-    match === true  ? '#f0fdf4' :
-    match === false ? '#fff1f2' :
-    '#FAFAF7';
+    match === true ? '#f0fdf4' :
+      match === false ? '#fff1f2' :
+        '#FAFAFA';
 
   return (
     <View style={{ marginBottom: 4 }}>
@@ -129,7 +130,11 @@ function PasswordField({
 
 // ─── Info row ─────────────────────────────────────────────────────────────────
 
-function InfoRow({ emoji, label, value }: { emoji: string; label: string; value: string }) {
+function InfoRow({
+  emoji, label, value, primary,
+}: {
+  emoji: string; label: string; value: string; primary: string;
+}) {
   return (
     <View style={{
       flexDirection: 'row', alignItems: 'center',
@@ -137,7 +142,8 @@ function InfoRow({ emoji, label, value }: { emoji: string; label: string; value:
     }}>
       <View style={{
         width: 36, height: 36, borderRadius: 999,
-        backgroundColor: '#F5F0DC', alignItems: 'center', justifyContent: 'center',
+        backgroundColor: primary + '15',
+        alignItems: 'center', justifyContent: 'center',
         marginRight: 12,
       }}>
         <Text style={{ fontSize: 16 }}>{emoji}</Text>
@@ -156,12 +162,17 @@ function InfoRow({ emoji, label, value }: { emoji: string; label: string; value:
 
 // ─── Section header ───────────────────────────────────────────────────────────
 
-function SectionHeader({ emoji, title, subtitle }: { emoji: string; title: string; subtitle?: string }) {
+function SectionHeader({
+  emoji, title, subtitle, primary,
+}: {
+  emoji: string; title: string; subtitle?: string; primary: string;
+}) {
   return (
     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 20 }}>
       <View style={{
         width: 42, height: 42, borderRadius: 999,
-        backgroundColor: '#F5F0DC', alignItems: 'center', justifyContent: 'center',
+        backgroundColor: primary + '15',
+        alignItems: 'center', justifyContent: 'center',
       }}>
         <Text style={{ fontSize: 18 }}>{emoji}</Text>
       </View>
@@ -179,7 +190,7 @@ function SectionHeader({ emoji, title, subtitle }: { emoji: string; title: strin
 
 function AnimatedCard({ children, delay }: { children: React.ReactNode; delay: number }) {
   const translateY = useRef(new Animated.Value(24)).current;
-  const opacity    = useRef(new Animated.Value(0)).current;
+  const opacity = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
     const t = setTimeout(() => {
@@ -207,40 +218,40 @@ function AnimatedCard({ children, delay }: { children: React.ReactNode; delay: n
 
 export default function Settings() {
   const { token } = useAuth();
+  const theme = useTheme();
   const { width } = useWindowDimensions();
 
-  const isPhone  = width < 640;
-  const sidePad  = isPhone ? 16 : 24;
+  const isPhone = width < 640;
+  const sidePad = isPhone ? 16 : 24;
   const maxWidth = Math.min(width, 680);
 
-  const [user,    setUser]    = useState<User | null>(null);
+  const [user, setUser] = useState<User | null>(null);
   const [current, setCurrent] = useState('');
-  const [newPwd,  setNewPwd]  = useState('');
+  const [newPwd, setNewPwd] = useState('');
   const [confirm, setConfirm] = useState('');
-  const [show,    setShow]    = useState<Record<Field, boolean>>({
+  const [show, setShow] = useState<Record<Field, boolean>>({
     current: false, new: false, confirm: false,
   });
   const [loading, setLoading] = useState(false);
-  const [error,   setError]   = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
 
   const toggleShow = (field: Field) =>
     setShow(prev => ({ ...prev, [field]: !prev[field] }));
 
-  // Charger infos user
   useEffect(() => {
     if (!token) return;
     apiFetch('/api/me', token)
       .then(r => r.ok ? r.json() : null)
       .then(data => data && setUser(data))
-      .catch(() => {});
+      .catch(() => { });
   }, [token]);
 
   const validate = () => {
     if (!current || !newPwd || !confirm) return 'Tous les champs sont requis.';
-    if (newPwd.length < 8)               return 'Le nouveau mot de passe doit faire au moins 8 caractères.';
-    if (newPwd !== confirm)              return 'Les mots de passe ne correspondent pas.';
-    if (current === newPwd)              return 'Le nouveau mot de passe doit être différent de l\'actuel.';
+    if (newPwd.length < 8) return 'Le nouveau mot de passe doit faire au moins 8 caractères.';
+    if (newPwd !== confirm) return 'Les mots de passe ne correspondent pas.';
+    if (current === newPwd) return "Le nouveau mot de passe doit être différent de l'actuel.";
     return null;
   };
 
@@ -253,7 +264,7 @@ export default function Settings() {
     setSuccess(false);
 
     try {
-      const res  = await apiFetch('/api/auth/change-password', token!, {
+      const res = await apiFetch('/api/auth/change-password', token!, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ current_password: current, new_password: newPwd }),
@@ -272,14 +283,17 @@ export default function Settings() {
   };
 
   const cardStyle = {
-    borderRadius: 28, borderWidth: 1, borderColor: '#E8E3C8',
-    backgroundColor: '#ffffff', padding: isPhone ? 18 : 22,
+    borderRadius: 28,
+    borderWidth: 1,
+    borderColor: theme.border,
+    backgroundColor: '#ffffff',
+    padding: isPhone ? 18 : 22,
     marginBottom: 14,
     shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 14, elevation: 3,
   };
 
   return (
-    <View style={{ flex: 1, backgroundColor: '#F5F0DC' }}>
+    <View style={{ flex: 1, backgroundColor: theme.bg }}>
       <StatusBar barStyle="dark-content" />
 
       <ScrollView
@@ -293,7 +307,6 @@ export default function Settings() {
         }}
         showsVerticalScrollIndicator={false}
       >
-
         {/* ── Hero ── */}
         <AnimatedCard delay={0}>
           <View style={cardStyle}>
@@ -301,7 +314,7 @@ export default function Settings() {
               <View style={{ flex: 1, paddingRight: 12 }}>
                 <Text style={{
                   fontSize: 11, fontWeight: '900', letterSpacing: 2,
-                  color: '#C02A09', textTransform: 'uppercase',
+                  color: theme.textAccent, textTransform: 'uppercase',
                 }}>
                   Paramètres
                 </Text>
@@ -317,8 +330,10 @@ export default function Settings() {
               </View>
               <View style={{
                 width: isPhone ? 56 : 64, height: isPhone ? 56 : 64,
-                borderRadius: 999, backgroundColor: '#FFCB05',
+                borderRadius: 999, backgroundColor: theme.primary,
                 alignItems: 'center', justifyContent: 'center',
+                shadowColor: theme.primary, shadowOpacity: 0.2,
+                shadowRadius: 10, elevation: 4,
               }}>
                 <Text style={{ fontSize: isPhone ? 26 : 30 }}>⚙️</Text>
               </View>
@@ -330,12 +345,15 @@ export default function Settings() {
         {user && (
           <AnimatedCard delay={100}>
             <View style={cardStyle}>
-              <SectionHeader emoji="👤" title="Informations" subtitle="Votre profil" />
-              <InfoRow emoji="✉️" label="Adresse e-mail" value={user.email} />
-              <InfoRow emoji="🏷️" label="Nom d'affichage" value={user.name} />
-              <View style={{ borderBottomWidth: 0 }}>
-                <InfoRow emoji="🆔" label="Identifiant" value={`#${String(user.id).padStart(5, '0')}`} />
-              </View>
+              <SectionHeader
+                emoji="👤"
+                title="Informations"
+                subtitle="Votre profil"
+                primary={theme.primary}
+              />
+              <InfoRow emoji="✉️" label="Adresse e-mail" value={user.email} primary={theme.primary} />
+              <InfoRow emoji="🏷️" label="Nom d'affichage" value={user.name} primary={theme.primary} />
+              <InfoRow emoji="🆔" label="Identifiant" value={`#${String(user.id).padStart(5, '0')}`} primary={theme.primary} />
             </View>
           </AnimatedCard>
         )}
@@ -347,6 +365,7 @@ export default function Settings() {
               emoji="🔒"
               title="Changer le mot de passe"
               subtitle="Minimum 8 caractères"
+              primary={theme.primary}
             />
 
             <PasswordField
@@ -380,7 +399,6 @@ export default function Settings() {
               match={confirm.length > 0 ? newPwd === confirm : null}
             />
 
-            {/* Feedback erreur */}
             {error && (
               <View style={{
                 marginTop: 16, borderRadius: 16,
@@ -395,7 +413,6 @@ export default function Settings() {
               </View>
             )}
 
-            {/* Feedback succès */}
             {success && (
               <View style={{
                 marginTop: 16, borderRadius: 16,
@@ -410,7 +427,6 @@ export default function Settings() {
               </View>
             )}
 
-            {/* Bouton submit */}
             <Pressable
               onPress={handleSubmit}
               disabled={loading}
@@ -419,8 +435,8 @@ export default function Settings() {
                 borderRadius: 999,
                 paddingVertical: 16,
                 alignItems: 'center',
-                backgroundColor: loading ? '#E2E8F0' : '#C02A09',
-                shadowColor: loading ? 'transparent' : '#C02A09',
+                backgroundColor: loading ? '#E2E8F0' : theme.primary,
+                shadowColor: loading ? 'transparent' : theme.primary,
                 shadowOpacity: loading ? 0 : 0.25,
                 shadowRadius: 14,
                 elevation: loading ? 0 : 5,
