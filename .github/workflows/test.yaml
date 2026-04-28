@@ -15,4 +15,4 @@ jobs:
     -uses: astral-sh/setup-uv@v3
     -run: uv python install
     -run: uv sync --dev
-    -run: uv run ./manage.py test --noinput
+    -run: cd pokecard_masters/project && uv run ./manage.py test --noinput
