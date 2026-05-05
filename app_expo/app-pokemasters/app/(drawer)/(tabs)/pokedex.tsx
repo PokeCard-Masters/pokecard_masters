@@ -1,15 +1,6 @@
-import {
-  ActivityIndicator,
-  FlatList,
-  Image,
-  Pressable,
-  StatusBar,
-  Text,
-  TextInput,
-  View,
-  useWindowDimensions,
-} from 'react-native';
+import { ActivityIndicator, FlatList, Image, Pressable, StatusBar, Text, TextInput, View, useWindowDimensions, } from 'react-native';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useLocalSearchParams } from 'expo-router';
 import { useAuth } from '@/context/AuthContext';
 import { useTheme } from '@/hooks/useTheme';
 import { apiFetch } from '@/services/api';
@@ -69,12 +60,14 @@ export default function Pokedex() {
   const numCols = isPhone ? 2 : width < 1024 ? 3 : 4;
   const sidePad = isPhone ? 16 : 24;
 
+  const { tab } = useLocalSearchParams<{ tab?: Mode }>();
+
   const [pokemons, setPokemons] = useState<Pokemon[]>([]);
   const [page, setPage] = useState(1);
   const [totalCount, setTotalCount] = useState(0);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [mode, setMode] = useState<Mode>('pokedex');
+  const [mode, setMode] = useState<Mode>(tab === 'collection' ? 'collection' : 'pokedex');
   const [activeFilter, setActiveFilter] = useState<FilterKey>('all');
   const [query, setQuery] = useState('');
 
@@ -104,8 +97,6 @@ export default function Pokedex() {
 
       const data: PaginatedResponse = await response.json();
 
-      // ✅ FIX pagination : on remplace (pas accumule) — c'est une pagination par page,
-      //    on scrollToTop après chaque changement de page
       setPokemons(data.items);
       setTotalCount(data.count);
     } catch (err: any) {
@@ -125,7 +116,6 @@ export default function Pokedex() {
     setPokemons([]);
     setPage(newPage);
     setQuery('');
-    // ✅ FIX : scroll haut après changement de page
     setTimeout(() => {
       listRef.current?.scrollToOffset({ offset: 0, animated: true });
     }, 50);
@@ -239,11 +229,9 @@ export default function Pokedex() {
         </View>
       </Pressable>
     );
-    // ✅ FIX : theme.primary dans les deps pour que la couleur se mette à jour
   }, [theme.primary, page]);
 
   // ── Header ────────────────────────────────────────────────────────────────
-  // ✅ FIX : tous les états et handlers dans les deps
   const headerElement = useMemo(() => (
     <View style={{ marginBottom: 16 }}>
 
@@ -510,7 +498,7 @@ export default function Pokedex() {
         keyExtractor={item => `page${page}-${item.id}`}
         extraData={pokemons}
         numColumns={numCols}
-        key={`grid-${numCols}-${page}`} 
+        key={`grid-${numCols}-${page}`}
         columnWrapperStyle={{ gap: 12 }}
         contentContainerStyle={{
           paddingHorizontal: sidePad,
