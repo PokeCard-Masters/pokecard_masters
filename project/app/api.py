@@ -1,14 +1,13 @@
+from django.db.models import F, OuterRef, Subquery, IntegerField, Value
 from django.contrib.auth.hashers import make_password, check_password
 from .authentification import GoogleJWTAuth, create_app_jwt
-from .models import Card, User, PlayerCard
-from ninja import NinjaAPI, Schema
-from django.db import transaction
-from django.db.models import F, OuterRef, Subquery, IntegerField, Value
 from django.db.models.functions import Coalesce
+from django.core.paginator import Paginator
+from .models import Card, User, PlayerCard
+from django.db import transaction
+from ninja import NinjaAPI, Schema
 from typing import Optional
 from typing import List
-from django.core.paginator import Paginator
-
 import random
 import uuid
 

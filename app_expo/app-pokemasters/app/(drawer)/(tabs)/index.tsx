@@ -1,9 +1,9 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Animated, Easing, Image, Pressable, ScrollView, StatusBar, Text, useWindowDimensions, View, } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { useTheme } from '@/hooks/useTheme';
 import { apiFetch } from '@/services/api';
+import { useRouter } from 'expo-router';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -539,17 +539,17 @@ export default function HomeScreen() {
           <ShortcutButton
             emoji="🎴" label="Ouvrir" sublabel="un booster"
             accent accentColor={theme.primary} delay={100}
-            onPress={() => router.push('/(tabs)/booster')}
+            onPress={() => router.push('/(drawer)/(tabs)/booster')}
           />
           <ShortcutButton
             emoji="📖" label="Pokédex" sublabel="Toutes les cartes"
             accentColor={theme.primary} delay={180}
-            onPress={() => router.push('/(tabs)/pokedex')}
+            onPress={() => router.push('/(drawer)/(tabs)/pokedex')}
           />
           <ShortcutButton
             emoji="⭐" label="Collection" sublabel="Mes cartes"
             accentColor={theme.primary} delay={260}
-            onPress={() => router.push('/(tabs)/pokedex')}
+            onPress={() => router.push('/(drawer)/(tabs)/pokedex?tab=collection')}
           />
         </View>
 
@@ -566,7 +566,7 @@ export default function HomeScreen() {
               }}>
                 Dernières cartes
               </Text>
-              <Pressable onPress={() => router.push('/(tabs)/pokedex')}>
+              <Pressable onPress={() => router.push('/(drawer)/(tabs)/pokedex?tab=collection')}>
                 <Text style={{ fontSize: 12, fontWeight: '700', color: theme.textAccent }}>
                   Voir tout →
                 </Text>
@@ -611,7 +611,7 @@ export default function HomeScreen() {
                 Ouvre ton premier booster et découvre tes cartes rares !
               </Text>
               <Pressable
-                onPress={() => router.push('/(tabs)/booster')}
+                onPress={() => router.push('/(drawer)/(tabs)/booster')}
                 style={{
                   ...theme.button,
                   paddingHorizontal: 32,
