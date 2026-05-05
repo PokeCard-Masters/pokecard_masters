@@ -177,7 +177,7 @@ def register(request, payload: RegisterIn):
         existing = User.objects.get(email=email)
         if existing.password:
             return 409, {"detail": "An account with this email already exists."}
-        if User.objects.filter(pseudo_iexact=pseudo).exists():
+        if User.objects.filter(pseudo__iexact=pseudo).exists():
             return 409, {"detail": "This pseudo is already taken."}
         existing.password = make_password(password)
         existing.name = name
