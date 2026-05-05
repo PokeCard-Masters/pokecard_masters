@@ -522,7 +522,7 @@ export default function HomeScreen() {
         ) : (
           <View style={{ flexDirection: 'row', gap: 10, marginBottom: 14 }}>
             <StatCard label="Boosters" value={stats?.booster_count ?? 0} accent accentColor={theme.primary} delay={0} />
-            <StatCard label="Cartes" value={stats?.total_owned ?? 0} sub={`${stats?.unique_owned ?? 0} uniques`} accentColor={theme.primary} delay={80} />
+            <StatCard label="Cartes" value={stats?.total_owned ?? 0} accentColor={theme.primary} delay={80} />
             <StatCard label="Rares obtenues" value={stats?.rare_count ?? 0} accentColor={theme.primary} delay={160} />
           </View>
         )}
@@ -542,7 +542,7 @@ export default function HomeScreen() {
             onPress={() => router.push('/(drawer)/(tabs)/booster')}
           />
           <ShortcutButton
-            emoji="📖" label="Pokédex" sublabel="Toutes les cartes"
+            emoji="📖" label="Pokédex" sublabel="Voir les cartes"
             accentColor={theme.primary} delay={180}
             onPress={() => router.push('/(drawer)/(tabs)/pokedex')}
           />
