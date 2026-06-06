@@ -2,6 +2,7 @@ import { Animated, Easing, Modal, Pressable, ScrollView, StatusBar, StyleSheet, 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { RefreshControl } from 'react-native-gesture-handler';
 import { useAuth } from '@/context/AuthContext';
+import { useRegion } from '@/context/RegionContext';
 import { useFocusEffect } from 'expo-router';
 import { useTheme } from '@/hooks/useTheme';
 import { apiFetch } from '@/services/api';
@@ -351,6 +352,7 @@ function StatPill({
 
 export default function ProfileScreen() {
     const { token } = useAuth();
+    const { setRegion: setContextRegion } = useRegion();
     const { width } = useWindowDimensions();
     const theme = useTheme();
 
@@ -436,20 +438,10 @@ export default function ProfileScreen() {
     }, [loading]);
 
     const handleSelectRegion = async (regionKey: string) => {
-        if (!token || !profile) return;
         setSavingRegion(true);
         try {
-            const res = await apiFetch('/api/me/region', token, {
-                method: 'PATCH',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ region: regionKey }),
-            });
-            if (res.ok) {
-                const updated = await res.json();
-                setProfile(updated);
-            }
-        } catch (e) {
-            console.error('Region update error:', e);
+            await setContextRegion(regionKey);
+            setProfile(prev => prev ? { ...prev, region: regionKey } : prev);
         } finally {
             setSavingRegion(false);
         }
