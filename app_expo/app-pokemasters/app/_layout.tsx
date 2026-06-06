@@ -1,12 +1,10 @@
 import { DarkTheme, DefaultTheme, ThemeProvider } from "@react-navigation/native";
+import { AuthProvider, useAuth } from "@/context/AuthContext";
 import { Stack, useRouter, useSegments } from "expo-router";
+import { RegionProvider } from '@/context/RegionContext';
+import { useColorScheme } from "react-native";
 import { StatusBar } from "expo-status-bar";
 import { useEffect } from "react";
-import { useColorScheme } from "react-native";
-import { AuthProvider, useAuth } from "@/context/AuthContext";
-
-import { RegionProvider } from '@/context/RegionContext';
-
 import "react-native-reanimated";
 import '../global.css';
 
@@ -52,7 +50,7 @@ export default function RootLayout() {
     <ThemeProvider value={colorScheme === "dark" ? DarkTheme : DefaultTheme}>
       <AuthProvider>
         <RegionProvider>
-        <RootNavigator />
+          <RootNavigator />
         </RegionProvider>
       </AuthProvider>
       <StatusBar style="auto" />

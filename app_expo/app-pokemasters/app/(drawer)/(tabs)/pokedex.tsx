@@ -1,7 +1,9 @@
 import { ActivityIndicator, FlatList, Image, Pressable, StatusBar, Text, TextInput, View, useWindowDimensions, } from 'react-native';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useFocusEffect } from '@react-navigation/native';
 import { useLocalSearchParams } from 'expo-router';
 import { useAuth } from '@/context/AuthContext';
+import { RefreshControl } from 'react-native';
 import { useTheme } from '@/hooks/useTheme';
 import { apiFetch } from '@/services/api';
 
@@ -23,7 +25,7 @@ type PaginatedResponse = {
 };
 
 type Mode = 'pokedex' | 'collection';
-type FilterKey = 'all' | 'Rare' | 'Ultra Rare' | 'Secret';
+type FilterKey = 'all' | 'common' | 'uncommon' | 'rare';
 
 const PAGE_SIZE = 10;
 
@@ -44,10 +46,11 @@ const getRarityStyle = (rarity: string | null) =>
 
 const FILTERS: { key: FilterKey; label: string; emoji: string }[] = [
   { key: 'all', label: 'Tous', emoji: '📋' },
-  { key: 'Rare', label: 'Rare', emoji: '💎' },
-  { key: 'Ultra Rare', label: 'Ultra Rare', emoji: '✨' },
-  { key: 'Secret', label: 'Secret', emoji: '🌟' },
+  { key: 'common', label: 'Commun', emoji: '◆' },
+  { key: 'uncommon', label: 'Peu commun', emoji: '◆◆◆' },
+  { key: 'rare', label: 'Rare', emoji: '★' },
 ];
+
 
 // ─── Main ─────────────────────────────────────────────────────────────────────
 
@@ -70,6 +73,7 @@ export default function Pokedex() {
   const [mode, setMode] = useState<Mode>(tab === 'collection' ? 'collection' : 'pokedex');
   const [activeFilter, setActiveFilter] = useState<FilterKey>('all');
   const [query, setQuery] = useState('');
+  const [ refreshing, setRefreshing ] = useState(false);
 
   const listRef = useRef<FlatList>(null);
   const totalPages = Math.max(1, Math.ceil(totalCount / PAGE_SIZE));
@@ -106,9 +110,11 @@ export default function Pokedex() {
     }
   }, [token]);
 
-  useEffect(() => {
-    fetchPokedex(page, mode, activeFilter);
-  }, [page, mode, activeFilter, fetchPokedex]);
+  useFocusEffect(
+    useCallback(() => {
+      fetchPokedex(page, mode, activeFilter);
+    }, [page, mode, activeFilter, fetchPokedex])
+  )
 
   // ── Handlers ──────────────────────────────────────────────────────────────
   const goToPage = useCallback((newPage: number) => {
@@ -134,6 +140,13 @@ export default function Pokedex() {
     setQuery('');
   }, []);
 
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await fetchPokedex(page, mode, activeFilter);
+    setRefreshing(false);
+  }, [page, mode, activeFilter, fetchPokedex]);
+
+
   // ── Recherche locale ───────────────────────────────────────────────────────
   const visiblePokemons = useMemo(() => {
     const normalized = query.trim().toLowerCase();
@@ -145,10 +158,9 @@ export default function Pokedex() {
     );
   }, [pokemons, query]);
 
+  const RARE_RARITIES = new Set(['One Shiny', 'One Star', 'Two Star', 'Three Star', 'Two Shiny', 'Crown']);
   const rarityCount = useMemo(
-    () => pokemons.filter(p =>
-      p.rarity === 'Rare' || p.rarity === 'Ultra Rare' || p.rarity === 'Secret'
-    ).length,
+    () => pokemons.filter(p => p.rarity != null && RARE_RARITIES.has(p.rarity)).length,
     [pokemons]
   );
 
@@ -513,6 +525,7 @@ export default function Pokedex() {
         removeClippedSubviews={false}
         initialNumToRender={PAGE_SIZE}
         maxToRenderPerBatch={PAGE_SIZE}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh}/>}
         windowSize={5}
         style={{ opacity: loading ? 0.65 : 1 }}
       />

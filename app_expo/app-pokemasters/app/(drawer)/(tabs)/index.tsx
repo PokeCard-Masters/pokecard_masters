@@ -1,5 +1,7 @@
 import { Animated, Easing, Image, Pressable, ScrollView, StatusBar, Text, useWindowDimensions, View, } from 'react-native';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { RefreshControl } from 'react-native-gesture-handler';
+import { useFocusEffect } from '@react-navigation/native';
 import { useAuth } from '@/context/AuthContext';
 import { useTheme } from '@/hooks/useTheme';
 import { apiFetch } from '@/services/api';
@@ -360,6 +362,7 @@ export default function HomeScreen() {
   const [stats, setStats] = useState<Stats | null>(null);
   const [recent, setRecent] = useState<RecentCard[]>([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
 
   const headerY = useRef(new Animated.Value(-20)).current;
   const headerO = useRef(new Animated.Value(0)).current;
@@ -390,7 +393,17 @@ export default function HomeScreen() {
     }
   }, [token]);
 
-  useEffect(() => { loadData(); }, [loadData]);
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await loadData();
+    setRefreshing(false);
+  }, [loadData])
+
+  useFocusEffect(
+    useCallback(() => {
+      loadData();
+    }, [loadData])
+  );
 
   const greeting = useMemo(() => getGreeting(user?.name ?? 'Dresseur'), [user]);
   const rank = getRank(stats?.booster_count ?? 0);
@@ -409,6 +422,7 @@ export default function HomeScreen() {
       <StatusBar barStyle="dark-content" />
 
       <ScrollView
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
         contentContainerStyle={{
           paddingHorizontal: sidePad,
           paddingTop: 24,
@@ -549,7 +563,7 @@ export default function HomeScreen() {
           <ShortcutButton
             emoji="⭐" label="Collection" sublabel="Mes cartes"
             accentColor={theme.primary} delay={260}
-            onPress={() => router.push('/(drawer)/(tabs)/pokedex?tab=collection')}
+            onPress={() => router.push('/(drawer)/(tabs)/pokedex?/tab=collection')}
           />
         </View>
 

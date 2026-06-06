@@ -1,11 +1,11 @@
 import React, { createContext, useContext, useEffect, useState, useCallback } from "react";
-import { Platform } from "react-native";
+import { AUTH_CONFIG, GOOGLE_DISCOVERY } from "@/config/auth";
+import * as SecureStore from "expo-secure-store";
 import * as AuthSession from "expo-auth-session";
 import * as WebBrowser from "expo-web-browser";
-import * as SecureStore from "expo-secure-store";
-import { AUTH_CONFIG, GOOGLE_DISCOVERY } from "@/config/auth";
-import { apiFetch } from "@/services/api";
 import { API_BASE_URL } from "@/config/auth";
+import { apiFetch } from "@/services/api";
+import { Platform } from "react-native";
 
 const storage = {
   getItem: async (key: string): Promise<string | null> => {
@@ -49,10 +49,10 @@ const AuthContext = createContext<AuthState>({
   token: null,
   user: null,
   isLoading: true,
-  signIn: async () => {},
+  signIn: async () => { },
   signInWithPassword: async () => null,
   register: async () => null,
-  signOut: async () => {},
+  signOut: async () => { },
 });
 
 export function useAuth() {
@@ -171,7 +171,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const data = await res.json();
 
         if (!res.ok) {
-          return extractError(data); 
+          return extractError(data);
         }
 
         setToken(data.token);
@@ -198,7 +198,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const data = await res.json();
 
         if (!res.ok) {
-          return extractError(data); 
+          return extractError(data);
         }
 
         setToken(data.token);

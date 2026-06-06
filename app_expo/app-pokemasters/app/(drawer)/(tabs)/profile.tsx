@@ -1,19 +1,10 @@
+import { Animated, Easing, Modal, Pressable, ScrollView, StatusBar, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import {
-    Animated,
-    Easing,
-    Modal,
-    Pressable,
-    ScrollView,
-    StatusBar,
-    StyleSheet,
-    Text,
-    View,
-    useWindowDimensions,
-} from 'react-native';
+import { RefreshControl } from 'react-native-gesture-handler';
 import { useAuth } from '@/context/AuthContext';
-import { apiFetch } from '@/services/api';
+import { useFocusEffect } from 'expo-router';
 import { useTheme } from '@/hooks/useTheme';
+import { apiFetch } from '@/services/api';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -372,6 +363,7 @@ export default function ProfileScreen() {
     const [loading, setLoading] = useState(true);
     const [pickerVisible, setPickerVisible] = useState(false);
     const [savingRegion, setSavingRegion] = useState(false);
+    const [refreshing, setRefreshing ] = useState(false);
 
     // Animations
     const bannerScale = useRef(new Animated.Value(1.08)).current;
@@ -379,25 +371,59 @@ export default function ProfileScreen() {
     const contentY = useRef(new Animated.Value(30)).current;
     const contentO = useRef(new Animated.Value(0)).current;
 
-    const loadData = useCallback(async () => {
-        if (!token) return;
-        setLoading(true);
-        try {
+    const loadDatas = useCallback(
+        async (options?: { silent?: boolean }) => {
+          if (!token) return;
+      
+          const silent = options?.silent ?? false;
+      
+          if (!silent) {
+            setLoading(true);
+          }
+      
+          try {
             const [profileRes, statsRes] = await Promise.all([
-                apiFetch('/api/me/profile', token),
-                apiFetch('/api/stats', token),
+              apiFetch("/api/me/profile", token),
+              apiFetch("/api/stats", token),
             ]);
-            if (profileRes.ok) setProfile(await profileRes.json());
-            if (statsRes.ok) setStats(await statsRes.json());
-        } catch (e) {
-            console.error('Profile load error:', e);
+      
+            if (profileRes.ok) {
+              setProfile(await profileRes.json());
+            }
+      
+            if (statsRes.ok) {
+              setStats(await statsRes.json());
+            }
+          } catch (e) {
+            console.error("Profile load error", e);
         } finally {
+          if (!silent) {
             setLoading(false);
+          }
         }
-    }, [token]);
-
-    useEffect(() => { loadData(); }, [loadData]);
-
+      },
+      [token]
+    );
+    useEffect(() => {
+        loadDatas();
+      }, [loadDatas]);
+      
+      useFocusEffect(
+        useCallback(() => {
+          if (!loading) {
+            loadDatas({ silent: true });
+          }
+        }, [loading, loadDatas])
+      );
+      
+      const onRefresh = useCallback(async () => {
+        setRefreshing(true);
+        try {
+          await loadDatas({ silent: true });
+        } finally {
+          setRefreshing(false);
+        }
+      }, [loadDatas]);
     useEffect(() => {
         if (!loading) {
             Animated.parallel([
@@ -443,6 +469,7 @@ export default function ProfileScreen() {
 
             <ScrollView
                 contentContainerStyle={{ paddingBottom: 52 }}
+                refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
                 showsVerticalScrollIndicator={false}
             >
 
