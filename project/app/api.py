@@ -362,7 +362,11 @@ def pagination(request, page: int = 1, limit: int = 10, rarity: Optional[str] = 
         )
     )
     if rarity:
-        queryset = queryset.filter(rarity__icontains=rarity)
+        tier = RARITY_TIERS.get(rarity.lower())
+        if tier:
+            queryset = queryset.filter(rarity__in=tier)
+        else:
+            queryset = queryset.filter(rarity__icontains=rarity)
 
     paginator = Paginator(queryset, limit)
     page_obj = paginator.get_page(page)
@@ -389,7 +393,11 @@ def collection_pagination(request, page: int = 1, limit: int = 10, rarity: Optio
         card_user__user_id=user_id
     )
     if rarity:
-        queryset = queryset.filter(card__rarity__icontains=rarity)
+        tier = RARITY_TIERS.get(rarity.lower())
+        if tier:
+            queryset = queryset.filter(card__rarity__in=tier)
+        else:
+            queryset = queryset.filter(card__rarity__icontains=rarity)
 
     paginator = Paginator(queryset, limit)
     page_obj = paginator.get_page(page)

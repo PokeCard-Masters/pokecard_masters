@@ -1,18 +1,18 @@
-import { useState } from 'react';
 import { Animated, Image, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useFonts, PressStart2P_400Regular } from '@expo-google-fonts/press-start-2p';
+import ParticlesBackground from '@/components/login_components/ParticlesBackground';
+import PasswordStrength from '@/components/login_components/PasswordStrenght';
+import BackgroundCards from '@/components/login_components/BackgroundCard';
+import SkeletonLoader from '@/components/login_components/SkeletonLoader';
+import LightningOverlay from '@/components/login_components/LightOverlay';
+import ProfChenQuote from '@/components/login_components/Quote';
+import Pokeball from '@/components/login_components/pokeball';
+import { usePokemonLogin } from '@/hooks/usePokemonLogin';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useAuth } from '@/context/AuthContext';
-import { useFonts, PressStart2P_400Regular } from '@expo-google-fonts/press-start-2p';
-import { usePokemonLogin } from '@/hooks/usePokemonLogin';
+import { useRouter } from 'expo-router';
+import { useState } from 'react';
 
-import Pokeball from '@/components/login_components/pokeball';
-import BackgroundCards from '@/components/login_components/BackgroundCard';
-import ParticlesBackground from '@/components/login_components/ParticlesBackground';
-import LightningOverlay from '@/components/login_components/LightOverlay';
-import PasswordStrength from '@/components/login_components/PasswordStrenght';
-import ProfChenQuote from '@/components/login_components/Quote';
-import SkeletonLoader from '@/components/login_components/SkeletonLoader';
 
 type Tab = 'login' | 'register';
 
@@ -87,7 +87,7 @@ export default function LoginScreen() {
     } else {
       hapticSuccess();
       await playSuccessSound();
-      setTimeout(() => router.replace('/(drawer)/(tabs)/booster'), 400);
+      setTimeout(() => router.replace('/'), 400);
     }
   }; 
 
