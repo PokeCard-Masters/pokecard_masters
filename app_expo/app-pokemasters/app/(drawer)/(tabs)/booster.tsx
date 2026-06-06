@@ -178,13 +178,11 @@ function FlippableCard({
   delay,
   cardWidth,
   cardHeight,
-  gap
 }: {
   card: Card;
   delay: number;
   cardWidth: number;
   cardHeight: number;
-  gap: number;
 }) {
   const flip = useRef(new Animated.Value(0)).current;
   const entryScale = useRef(new Animated.Value(0.6)).current;
@@ -233,8 +231,6 @@ function FlippableCard({
         {
           width: cardWidth,
           height: cardHeight,
-          marginBottom: 12,
-          marginHorizontal: gap / 2,
         }, { transform: [{ scale: entryScale }, { translateY: entryY }, ...(isSpecial ? [{ scale: glowScale }] : [])] },
       ]}
     >
@@ -311,7 +307,7 @@ function FlippableCard({
 
 export default function BoosterOpening() {
   const { token } = useAuth();
-  const { width } = useWindowDimensions();
+  const { width, height } = useWindowDimensions();
   const theme = useTheme();
   const isPhone = width < 640;
   const isTablet = width >= 640 && width < 1024;
@@ -323,14 +319,16 @@ export default function BoosterOpening() {
   const gap = isPhone ? 12 : 16;
   const usableWidth = pageMaxWidth - sidePadding * 2;
   const cardWidth = Math.min(
-    (usableWidth / columns) - gap,
+    (usableWidth - gap * (columns - 1)) / columns,
     190
   );
-  const cardHeight = cardWidth * 1.02;
-  const packWidth = isDesktop ? 200 : isTablet ? 185 : 170;
-  const packHeight = isDesktop ? 310 : isTablet ? 286 : 264;
-  const stageW = isDesktop ? 320 : 260;
-  const stageH = isDesktop ? 430 : 360;
+  const cardHeight = cardWidth * 1.39;
+  // Stage height dynamique : ~450px sont pris par le padding, le header, le bouton et la tab bar
+  const stageH = isDesktop ? 520 : isTablet ? 380 : Math.max(180, Math.min(360, height - 450));
+  const stageW = isDesktop ? 440 : Math.min(260, width - sidePadding * 2);
+  const packRatio = stageH / (isDesktop ? 520 : isTablet ? 380 : 360);
+  const packHeight = Math.round((isDesktop ? 390 : isTablet ? 286 : 264) * packRatio);
+  const packWidth = Math.round((isDesktop ? 268 : isTablet ? 185 : 170) * packRatio);
 
   const [phase, setPhase] = useState<Phase>('idle');
   const [particleTrigger, setParticleTrigger] = useState(false);
@@ -360,7 +358,7 @@ export default function BoosterOpening() {
       apiFetch('/api/booster/count', token)
         .then(r => r.ok ? r.json() : null)
         .then(data => { if (data) setBoosterCount(data.booster_count); })
-        .catch(() => {});
+        .catch(() => { });
     }, [token])
   );
 
@@ -456,183 +454,265 @@ export default function BoosterOpening() {
         paddingBottom: 18,
       }}>
 
-        {/* ── Header ── */}
-        <View style={{
-          borderWidth: 1, borderColor: theme.border,
-          backgroundColor: theme.surface, borderRadius: 28,
-          padding: isPhone ? 18 : 22, marginBottom: 20,
-          shadowColor: '#000', shadowOpacity: 0.06, shadowRadius: 14, elevation: 3,
-        }}>
-          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-            <View style={{ flex: 1, paddingRight: 12 }}>
-              <Text style={{ fontSize: 11, fontWeight: '900', letterSpacing: 2, color: theme.primary, textTransform: 'uppercase' }}>
-                Pokémon TCG
-              </Text>
-              <Text style={{ marginTop: 4, fontSize: isPhone ? 24 : 28, fontWeight: '900', color: '#0f172a' }}>
-                Booster Opening
-              </Text>
-              <Text style={{ marginTop: 6, fontSize: 13, color: '#64748b', fontWeight: '600' }}>
-                Ouvre ton booster et découvre tes cartes rares
-              </Text>
+        {/* ── Header : mobile/tablet uniquement, ou phase revealed ── */}
+        {(!isDesktop || phase === 'revealed') && (
+          <View style={{
+            borderWidth: 1, borderColor: theme.border,
+            backgroundColor: theme.surface, borderRadius: 28,
+            padding: isPhone ? 18 : 22, marginBottom: 20,
+            shadowColor: '#000', shadowOpacity: 0.06, shadowRadius: 14, elevation: 3,
+          }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+              <View style={{ flex: 1, paddingRight: 12 }}>
+                <Text style={{ fontSize: 11, fontWeight: '900', letterSpacing: 2, color: theme.primary, textTransform: 'uppercase' }}>
+                  Pokémon TCG
+                </Text>
+                <Text style={{ marginTop: 4, fontSize: isPhone ? 24 : 28, fontWeight: '900', color: '#0f172a' }}>
+                  Booster Opening
+                </Text>
+                <Text style={{ marginTop: 6, fontSize: 13, color: '#64748b', fontWeight: '600' }}>
+                  Ouvre ton booster et découvre tes cartes rares
+                </Text>
+              </View>
+              <View style={{
+                width: isPhone ? 56 : 64, height: isPhone ? 56 : 64,
+                borderRadius: 999, backgroundColor: theme.accent,
+                alignItems: 'center', justifyContent: 'center',
+              }}>
+                <Text style={{ fontSize: isPhone ? 26 : 30 }}>🎴</Text>
+              </View>
             </View>
-            <View style={{
-              width: isPhone ? 56 : 64, height: isPhone ? 56 : 64,
-              borderRadius: 999, backgroundColor: theme.accent,
-              alignItems: 'center', justifyContent: 'center',
-            }}>
-              <Text style={{ fontSize: isPhone ? 26 : 30 }}>🎴</Text>
-            </View>
-          </View>
 
-          {boosterCount > 0 && (
-            <View style={{ flexDirection: 'row', gap: 12, marginTop: 18 }}>
-              <View style={{ flex: 1, backgroundColor: theme.bg, borderRadius: 18, paddingVertical: 12, alignItems: 'center' }}>
-                <Text style={{ fontSize: 20, fontWeight: '900', color: '#0f172a' }}>{boosterCount}</Text>
-                <Text style={{ marginTop: 3, fontSize: 11, fontWeight: '700', color: '#64748b' }}>Boosters ouverts</Text>
+            {boosterCount > 0 && (
+              <View style={{ flexDirection: 'row', gap: 12, marginTop: 18 }}>
+                <View style={{ flex: 1, backgroundColor: theme.bg, borderRadius: 18, paddingVertical: 12, alignItems: 'center' }}>
+                  <Text style={{ fontSize: 20, fontWeight: '900', color: '#0f172a' }}>{boosterCount}</Text>
+                  <Text style={{ marginTop: 3, fontSize: 11, fontWeight: '700', color: '#64748b' }}>Boosters ouverts</Text>
+                </View>
+                <View style={{ flex: 1, backgroundColor: theme.bg, borderRadius: 18, paddingVertical: 12, alignItems: 'center' }}>
+                  <Text style={{ fontSize: 20, fontWeight: '900', color: '#0f172a' }}>{rareCount}</Text>
+                  <Text style={{ marginTop: 3, fontSize: 11, fontWeight: '700', color: '#64748b' }}>Rares obtenus</Text>
+                </View>
               </View>
-              <View style={{ flex: 1, backgroundColor: theme.bg, borderRadius: 18, paddingVertical: 12, alignItems: 'center' }}>
-                <Text style={{ fontSize: 20, fontWeight: '900', color: '#0f172a' }}>{rareCount}</Text>
-                <Text style={{ marginTop: 3, fontSize: 11, fontWeight: '700', color: '#64748b' }}>Rares obtenus</Text>
-              </View>
-            </View>
-          )}
-        </View>
+            )}
+          </View>
+        )}
 
         {/* ════════ PACK PHASE ════════ */}
         {phase !== 'revealed' && (
-          <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
+          <View style={{
+            flex: 1,
+            flexDirection: isDesktop ? 'row' : 'column',
+            alignItems: 'center',
+            justifyContent: isDesktop ? 'center' : 'center',
+            gap: isDesktop ? 56 : 0,
+          }}>
 
-            <View style={{ alignItems: 'center', justifyContent: 'center', width: stageW, height: stageH, marginBottom: 8 }}>
+            {/* ── Pack + bouton ── */}
+            <View style={{ alignItems: 'center', justifyContent: 'center' }}>
+              <View style={{ alignItems: 'center', justifyContent: 'center', width: stageW, height: stageH, marginBottom: 8 }}>
 
-              {PARTICLES.map((cfg, i) => <Particle key={i} config={cfg} trigger={particleTrigger} />)}
+                {PARTICLES.map((cfg, i) => <Particle key={i} config={cfg} trigger={particleTrigger} />)}
 
-              {/* Halo */}
-              <Animated.View pointerEvents="none" style={{
-                position: 'absolute',
-                width: packWidth + 50, height: packHeight + 50,
-                borderRadius: 30, backgroundColor: theme.accent,
-                opacity: glowOpacity,
-                shadowColor: theme.accent, shadowOpacity: 1, shadowRadius: 40,
-              }} />
+                {/* Halo */}
+                <Animated.View pointerEvents="none" style={{
+                  position: 'absolute',
+                  width: packWidth + 50, height: packHeight + 50,
+                  borderRadius: 30, backgroundColor: theme.accent,
+                  opacity: glowOpacity,
+                  shadowColor: theme.accent, shadowOpacity: 1, shadowRadius: 40,
+                }} />
 
-              {/* Flash blanc */}
-              <Animated.View pointerEvents="none" style={{
-                position: 'absolute',
-                width: packWidth + 60, height: packHeight + 60,
-                backgroundColor: '#ffffff', borderRadius: 30,
-                zIndex: 30, opacity: whiteFlash,
-              }} />
+                {/* Flash blanc */}
+                <Animated.View pointerEvents="none" style={{
+                  position: 'absolute',
+                  width: packWidth + 60, height: packHeight + 60,
+                  backgroundColor: '#ffffff', borderRadius: 30,
+                  zIndex: 30, opacity: whiteFlash,
+                }} />
 
-              {/* Pack */}
-              <Animated.View style={{
-                transform: [
-                  { translateY: phase === 'idle' ? floatY : 0 },
-                  { scale: packScale },
-                  { rotateZ: packRotZInterp },
-                ],
-                opacity: packOpacity,
-              }}>
-                <View style={{
-                  width: packWidth, height: packHeight,
-                  borderRadius: 26, backgroundColor: theme.surface,
-                  borderWidth: 1.5, borderColor: theme.border,
-                  overflow: 'hidden',
-                  shadowColor: theme.primary, shadowOpacity: 0.18, shadowRadius: 24, elevation: 10,
+                {/* Pack */}
+                <Animated.View style={{
+                  transform: [
+                    { translateY: phase === 'idle' ? floatY : 0 },
+                    { scale: packScale },
+                    { rotateZ: packRotZInterp },
+                  ],
+                  opacity: packOpacity,
                 }}>
-                  {/* Zone primaire */}
                   <View style={{
-                    height: packHeight * 0.45,
-                    backgroundColor: theme.primary,
-                    alignItems: 'center', justifyContent: 'center', paddingTop: 12,
+                    width: packWidth, height: packHeight,
+                    borderRadius: 26, backgroundColor: theme.surface,
+                    borderWidth: 1.5, borderColor: theme.border,
+                    overflow: 'hidden',
+                    shadowColor: theme.primary, shadowOpacity: 0.18, shadowRadius: 24, elevation: 10,
                   }}>
-                    <View style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 4, backgroundColor: theme.accent, opacity: 0.8 }} />
-                    <Text style={{ fontSize: 7, fontWeight: '900', letterSpacing: 2.5, color: 'rgba(255,255,255,0.6)', marginBottom: 8 }}>
-                      ÉDITION SPÉCIALE
-                    </Text>
+                    {/* Zone primaire */}
                     <View style={{
-                      width: isPhone ? 54 : 58, height: isPhone ? 54 : 58,
-                      borderRadius: 999, backgroundColor: theme.accent,
-                      alignItems: 'center', justifyContent: 'center',
-                      shadowColor: theme.accent, shadowOpacity: 1, shadowRadius: 18, elevation: 10,
+                      height: packHeight * 0.45,
+                      backgroundColor: theme.primary,
+                      alignItems: 'center', justifyContent: 'center', paddingTop: 12,
                     }}>
-                      <Text style={{ fontSize: isPhone ? 26 : 28 }}>⚡</Text>
+                      <View style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 4, backgroundColor: theme.accent, opacity: 0.8 }} />
+                      <Text style={{ fontSize: 7, fontWeight: '900', letterSpacing: 2.5, color: 'rgba(255,255,255,0.6)', marginBottom: 8 }}>
+                        ÉDITION SPÉCIALE
+                      </Text>
+                      <View style={{
+                        width: isPhone ? 54 : 58, height: isPhone ? 54 : 58,
+                        borderRadius: 999, backgroundColor: theme.accent,
+                        alignItems: 'center', justifyContent: 'center',
+                        shadowColor: theme.accent, shadowOpacity: 1, shadowRadius: 18, elevation: 10,
+                      }}>
+                        <Text style={{ fontSize: isPhone ? 26 : 28 }}>⚡</Text>
+                      </View>
+                      <Text style={{ marginTop: 6, fontSize: isPhone ? 9 : 10, fontWeight: '900', letterSpacing: 3, color: 'rgba(255,255,255,0.5)' }}>
+                        POKÉMON
+                      </Text>
                     </View>
-                    <Text style={{ marginTop: 6, fontSize: isPhone ? 9 : 10, fontWeight: '900', letterSpacing: 3, color: 'rgba(255,255,255,0.5)' }}>
-                      POKÉMON
-                    </Text>
+
+                    {/* Séparateur */}
+                    <View style={{ height: 2.5, backgroundColor: theme.accent }} />
+
+                    {/* Zone bg */}
+                    <View style={{ flex: 1, backgroundColor: theme.bg, alignItems: 'center', justifyContent: 'space-evenly', paddingVertical: 10 }}>
+                      <View style={{ flexDirection: 'row', gap: 6 }}>
+                        {['🌿', '🔥', '💧', '⚡'].map((e, i) => (
+                          <View key={i} style={{
+                            width: isPhone ? 30 : 34, height: isPhone ? 30 : 34,
+                            borderRadius: 999, backgroundColor: theme.surface,
+                            borderWidth: 1, borderColor: theme.border,
+                            alignItems: 'center', justifyContent: 'center',
+                          }}>
+                            <Text style={{ fontSize: isPhone ? 14 : 15 }}>{e}</Text>
+                          </View>
+                        ))}
+                      </View>
+                      <Text style={{ fontSize: 7.5, fontWeight: '900', letterSpacing: 2, color: '#94a3b8' }}>5 CARTES RARES</Text>
+                      <View style={{ flexDirection: 'row', gap: 4 }}>
+                        {[0, 1, 2, 3, 4].map(i => (
+                          <View key={i} style={{
+                            width: 5, height: 5, borderRadius: 2.5,
+                            backgroundColor: theme.primary, opacity: 0.2 + i * 0.15,
+                          }} />
+                        ))}
+                      </View>
+                    </View>
+
+                    {/* Reflet */}
+                    <View pointerEvents="none" style={{
+                      position: 'absolute', top: 0, left: 0,
+                      width: '45%', height: '100%',
+                      backgroundColor: 'rgba(255,255,255,0.08)',
+                      borderRightWidth: 1, borderRightColor: 'rgba(255,255,255,0.12)',
+                    }} />
                   </View>
+                </Animated.View>
+              </View>
 
-                  {/* Séparateur */}
-                  <View style={{ height: 2.5, backgroundColor: theme.accent }} />
+              {/* Bouton ouvrir */}
+              <View style={{ alignItems: 'center', marginTop: 18 }}>
+                <Pressable
+                  onPress={handleOpen}
+                  disabled={phase !== 'idle'}
+                  style={{
+                    minWidth: isPhone ? 240 : 280,
+                    borderRadius: 999, paddingVertical: 16, paddingHorizontal: 28,
+                    backgroundColor: phase !== 'idle' ? '#E2E8F0' : theme.primary,
+                    alignItems: 'center',
+                    borderWidth: phase !== 'idle' ? 1 : 0, borderColor: '#CBD5E1',
+                    shadowColor: phase === 'idle' ? theme.primary : 'transparent',
+                    shadowOpacity: phase === 'idle' ? 0.2 : 0,
+                    shadowRadius: 14, elevation: phase === 'idle' ? 5 : 0,
+                  }}
+                >
+                  <Text style={{
+                    fontSize: 13, fontWeight: '900', letterSpacing: 1.5,
+                    color: phase !== 'idle' ? '#64748b' : '#ffffff',
+                  }}>
+                    {phase === 'idle' ? '✦  OUVRIR LE BOOSTER' : 'OUVERTURE EN COURS…'}
+                  </Text>
+                </Pressable>
 
-                  {/* Zone bg */}
-                  <View style={{ flex: 1, backgroundColor: theme.bg, alignItems: 'center', justifyContent: 'space-evenly', paddingVertical: 10 }}>
-                    <View style={{ flexDirection: 'row', gap: 6 }}>
-                      {['🌿', '🔥', '💧', '⚡'].map((e, i) => (
-                        <View key={i} style={{
-                          width: isPhone ? 30 : 34, height: isPhone ? 30 : 34,
-                          borderRadius: 999, backgroundColor: theme.surface,
-                          borderWidth: 1, borderColor: theme.border,
-                          alignItems: 'center', justifyContent: 'center',
-                        }}>
-                          <Text style={{ fontSize: isPhone ? 14 : 15 }}>{e}</Text>
-                        </View>
-                      ))}
-                    </View>
-                    <Text style={{ fontSize: 7.5, fontWeight: '900', letterSpacing: 2, color: '#94a3b8' }}>5 CARTES RARES</Text>
-                    <View style={{ flexDirection: 'row', gap: 4 }}>
-                      {[0, 1, 2, 3, 4].map(i => (
-                        <View key={i} style={{
-                          width: 5, height: 5, borderRadius: 2.5,
-                          backgroundColor: theme.primary, opacity: 0.2 + i * 0.15,
-                        }} />
-                      ))}
-                    </View>
-                  </View>
+                {phase === 'idle' && (
+                  <Text style={{ marginTop: 12, fontSize: 12, color: '#94a3b8', fontWeight: '600' }}>
+                    {boosterCount === 0
+                      ? 'Appuie pour révéler tes cartes'
+                      : `${boosterCount} booster${boosterCount > 1 ? 's' : ''} ouvert${boosterCount > 1 ? 's' : ''}`}
+                  </Text>
+                )}
+              </View>
+            </View>{/* ── fin pack + bouton ── */}
 
-                  {/* Reflet */}
-                  <View pointerEvents="none" style={{
-                    position: 'absolute', top: 0, left: 0,
-                    width: '45%', height: '100%',
-                    backgroundColor: 'rgba(255,255,255,0.08)',
-                    borderRightWidth: 1, borderRightColor: 'rgba(255,255,255,0.12)',
-                  }} />
-                </View>
-              </Animated.View>
-            </View>
-
-            {/* Bouton ouvrir */}
-            <View style={{ alignItems: 'center', marginTop: 18 }}>
-              <Pressable
-                onPress={handleOpen}
-                disabled={phase !== 'idle'}
-                style={{
-                  minWidth: isPhone ? 240 : 280,
-                  borderRadius: 999, paddingVertical: 16, paddingHorizontal: 28,
-                  backgroundColor: phase !== 'idle' ? '#E2E8F0' : theme.primary,
-                  alignItems: 'center',
-                  borderWidth: phase !== 'idle' ? 1 : 0, borderColor: '#CBD5E1',
-                  shadowColor: phase === 'idle' ? theme.primary : 'transparent',
-                  shadowOpacity: phase === 'idle' ? 0.2 : 0,
-                  shadowRadius: 14, elevation: phase === 'idle' ? 5 : 0,
-                }}
-              >
-                <Text style={{
-                  fontSize: 13, fontWeight: '900', letterSpacing: 1.5,
-                  color: phase !== 'idle' ? '#64748b' : '#ffffff',
+            {/* ── Panneau info (desktop uniquement) ── */}
+            {isDesktop && (
+              <View style={{ flex: 1, maxWidth: 440, justifyContent: 'center' }}>
+                <View style={{
+                  borderWidth: 1, borderColor: theme.border,
+                  backgroundColor: theme.surface, borderRadius: 28,
+                  padding: 28,
+                  shadowColor: '#000', shadowOpacity: 0.06, shadowRadius: 14, elevation: 3,
                 }}>
-                  {phase === 'idle' ? '✦  OUVRIR LE BOOSTER' : 'OUVERTURE EN COURS…'}
-                </Text>
-              </Pressable>
+                  {/* Titre */}
+                  <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24 }}>
+                    <View style={{ flex: 1, paddingRight: 12 }}>
+                      <Text style={{ fontSize: 11, fontWeight: '900', letterSpacing: 2, color: theme.primary, textTransform: 'uppercase' }}>
+                        Pokémon TCG
+                      </Text>
+                      <Text style={{ marginTop: 4, fontSize: 28, fontWeight: '900', color: '#0f172a' }}>
+                        Booster Opening
+                      </Text>
+                      <Text style={{ marginTop: 6, fontSize: 13, color: '#64748b', fontWeight: '600' }}>
+                        Ouvre ton booster et découvre tes cartes rares
+                      </Text>
+                    </View>
+                    <View style={{
+                      width: 64, height: 64, borderRadius: 999,
+                      backgroundColor: theme.accent,
+                      alignItems: 'center', justifyContent: 'center',
+                    }}>
+                      <Text style={{ fontSize: 30 }}>🎴</Text>
+                    </View>
+                  </View>
 
-              {phase === 'idle' && (
-                <Text style={{ marginTop: 12, fontSize: 12, color: '#94a3b8', fontWeight: '600' }}>
-                  {boosterCount === 0
-                    ? 'Appuie pour révéler tes cartes'
-                    : `${boosterCount} booster${boosterCount > 1 ? 's' : ''} ouvert${boosterCount > 1 ? 's' : ''}`}
-                </Text>
-              )}
-            </View>
+                  {/* Stats */}
+                  <View style={{ flexDirection: 'row', gap: 12, marginBottom: 24 }}>
+                    <View style={{ flex: 1, backgroundColor: theme.bg, borderRadius: 18, paddingVertical: 16, alignItems: 'center' }}>
+                      <Text style={{ fontSize: 24, fontWeight: '900', color: '#0f172a' }}>{boosterCount}</Text>
+                      <Text style={{ marginTop: 3, fontSize: 11, fontWeight: '700', color: '#64748b' }}>Boosters ouverts</Text>
+                    </View>
+                    <View style={{ flex: 1, backgroundColor: theme.bg, borderRadius: 18, paddingVertical: 16, alignItems: 'center' }}>
+                      <Text style={{ fontSize: 24, fontWeight: '900', color: theme.primary }}>{rareCount}</Text>
+                      <Text style={{ marginTop: 3, fontSize: 11, fontWeight: '700', color: '#64748b' }}>Rares (session)</Text>
+                    </View>
+                  </View>
+
+                  {/* Rarités */}
+                  <Text style={{ fontSize: 11, fontWeight: '900', letterSpacing: 1.5, color: '#94a3b8', textTransform: 'uppercase', marginBottom: 12 }}>
+                    Raretés à obtenir
+                  </Text>
+                  <View style={{ gap: 10 }}>
+                    {[
+                      { label: '★★★ Three Star', desc: 'Ultra rare — animation dorée', color: '#7c4dff' },
+                      { label: '♛ Crown', desc: 'La rareté maximale', color: '#ef5350' },
+                      { label: '✦✦ Two Shiny', desc: 'Brillante et très rare', color: '#f0c040' },
+                    ].map(tip => (
+                      <View key={tip.label} style={{
+                        flexDirection: 'row', alignItems: 'center', gap: 12,
+                        backgroundColor: theme.bg, borderRadius: 14,
+                        paddingVertical: 10, paddingHorizontal: 14,
+                        borderLeftWidth: 3, borderLeftColor: tip.color,
+                      }}>
+                        <View style={{ flex: 1 }}>
+                          <Text style={{ fontSize: 12, fontWeight: '900', color: '#0f172a' }}>{tip.label}</Text>
+                          <Text style={{ fontSize: 11, color: '#94a3b8', marginTop: 2 }}>{tip.desc}</Text>
+                        </View>
+                      </View>
+                    ))}
+                  </View>
+                </View>
+              </View>
+            )}
+
           </View>
         )}
 
@@ -662,8 +742,7 @@ export default function BoosterOpening() {
               <View style={{
                 flexDirection: 'row',
                 flexWrap: 'wrap',
-                marginHorizontal: -gap / 2,
-                justifyContent: isDesktop ? 'flex-start' : 'space-between',
+                gap: gap,
               }}>
                 {cards.map((card, i) => (
                   <FlippableCard
@@ -672,7 +751,6 @@ export default function BoosterOpening() {
                     delay={i * 180}
                     cardWidth={cardWidth}
                     cardHeight={cardHeight}
-                    gap={gap}
                   />
                 ))}
               </View>
