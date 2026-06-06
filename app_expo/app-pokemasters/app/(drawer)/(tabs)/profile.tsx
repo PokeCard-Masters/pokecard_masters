@@ -1,6 +1,7 @@
 import { Animated, Easing, Modal, Pressable, ScrollView, StatusBar, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { RefreshControl } from 'react-native-gesture-handler';
+import { getRank, getNextRank } from '@/constants/ranks';
 import { useAuth } from '@/context/AuthContext';
 import { useRegion } from '@/context/RegionContext';
 import { useFocusEffect } from 'expo-router';
@@ -126,26 +127,6 @@ function getRegion(key: string): Region {
 
 // ─── Rang dresseur ────────────────────────────────────────────────────────────
 
-type Rank = { label: string; emoji: string; min: number; color: string };
-
-const RANKS: Rank[] = [
-    { label: 'Novice', emoji: '🌱', min: 0, color: '#64748b' },
-    { label: 'Rookie', emoji: '⚡', min: 5, color: '#0277bd' },
-    { label: 'Exploreur', emoji: '🔥', min: 15, color: '#ea580c' },
-    { label: 'Expert', emoji: '💎', min: 30, color: '#6d28d9' },
-    { label: 'Champion', emoji: '🏆', min: 60, color: '#b45309' },
-    { label: 'Maître', emoji: '👑', min: 100, color: '#C02A09' },
-];
-
-function getRank(boosterCount: number): Rank {
-    return [...RANKS].reverse().find(r => boosterCount >= r.min) ?? RANKS[0];
-}
-
-function getNextRank(boosterCount: number): { rank: Rank; remaining: number } | null {
-    const next = RANKS.find(r => boosterCount < r.min);
-    if (!next) return null;
-    return { rank: next, remaining: next.min - boosterCount };
-}
 
 // ─── Initiales avatar ─────────────────────────────────────────────────────────
 
@@ -365,7 +346,7 @@ export default function ProfileScreen() {
     const [loading, setLoading] = useState(true);
     const [pickerVisible, setPickerVisible] = useState(false);
     const [savingRegion, setSavingRegion] = useState(false);
-    const [refreshing, setRefreshing ] = useState(false);
+    const [refreshing, setRefreshing] = useState(false);
 
     // Animations
     const bannerScale = useRef(new Animated.Value(1.08)).current;
@@ -375,57 +356,57 @@ export default function ProfileScreen() {
 
     const loadDatas = useCallback(
         async (options?: { silent?: boolean }) => {
-          if (!token) return;
-      
-          const silent = options?.silent ?? false;
-      
-          if (!silent) {
-            setLoading(true);
-          }
-      
-          try {
-            const [profileRes, statsRes] = await Promise.all([
-              apiFetch("/api/me/profile", token),
-              apiFetch("/api/stats", token),
-            ]);
-      
-            if (profileRes.ok) {
-              setProfile(await profileRes.json());
+            if (!token) return;
+
+            const silent = options?.silent ?? false;
+
+            if (!silent) {
+                setLoading(true);
             }
-      
-            if (statsRes.ok) {
-              setStats(await statsRes.json());
+
+            try {
+                const [profileRes, statsRes] = await Promise.all([
+                    apiFetch("/api/me/profile", token),
+                    apiFetch("/api/stats", token),
+                ]);
+
+                if (profileRes.ok) {
+                    setProfile(await profileRes.json());
+                }
+
+                if (statsRes.ok) {
+                    setStats(await statsRes.json());
+                }
+            } catch (e) {
+                console.error("Profile load error", e);
+            } finally {
+                if (!silent) {
+                    setLoading(false);
+                }
             }
-          } catch (e) {
-            console.error("Profile load error", e);
-        } finally {
-          if (!silent) {
-            setLoading(false);
-          }
-        }
-      },
-      [token]
+        },
+        [token]
     );
     useEffect(() => {
         loadDatas();
-      }, [loadDatas]);
-      
-      useFocusEffect(
+    }, [loadDatas]);
+
+    useFocusEffect(
         useCallback(() => {
-          if (!loading) {
-            loadDatas({ silent: true });
-          }
+            if (!loading) {
+                loadDatas({ silent: true });
+            }
         }, [loading, loadDatas])
-      );
-      
-      const onRefresh = useCallback(async () => {
+    );
+
+    const onRefresh = useCallback(async () => {
         setRefreshing(true);
         try {
-          await loadDatas({ silent: true });
+            await loadDatas({ silent: true });
         } finally {
-          setRefreshing(false);
+            setRefreshing(false);
         }
-      }, [loadDatas]);
+    }, [loadDatas]);
     useEffect(() => {
         if (!loading) {
             Animated.parallel([

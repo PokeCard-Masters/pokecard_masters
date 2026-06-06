@@ -1,4 +1,5 @@
 import { Animated, Easing, Image, Pressable, ScrollView, StatusBar, Text, useWindowDimensions, View, } from 'react-native';
+import { getRank } from '@/constants/ranks';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { RefreshControl } from 'react-native-gesture-handler';
 import { useFocusEffect } from '@react-navigation/native';
@@ -75,18 +76,6 @@ function getGreeting(name: string): { text: string; emoji: string } {
 
 // ─── Rank ─────────────────────────────────────────────────────────────────────
 
-type Rank = { label: string; emoji: string; min: number };
-const RANKS: Rank[] = [
-  { label: 'Novice', emoji: '🌱', min: 0 },
-  { label: 'Rookie', emoji: '⚡', min: 5 },
-  { label: 'Exploreur', emoji: '🔥', min: 15 },
-  { label: 'Expert', emoji: '💎', min: 30 },
-  { label: 'Champion', emoji: '🏆', min: 60 },
-  { label: 'Maître', emoji: '👑', min: 100 },
-];
-function getRank(n: number): Rank {
-  return [...RANKS].reverse().find(r => n >= r.min) ?? RANKS[0];
-}
 
 // ─── Skeleton ─────────────────────────────────────────────────────────────────
 
