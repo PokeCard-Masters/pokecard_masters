@@ -7,6 +7,7 @@ import { useAuth } from '@/context/AuthContext';
 import { useTheme } from '@/hooks/useTheme';
 import { apiFetch } from '@/services/api';
 import { useRouter } from 'expo-router';
+import { pokedexNav } from '@/constants/pokedexNav';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -547,12 +548,12 @@ export default function HomeScreen() {
           <ShortcutButton
             emoji="📖" label="Pokédex" sublabel="Voir les cartes"
             accentColor={theme.primary} delay={180}
-            onPress={() => router.push('/(drawer)/(tabs)/pokedex')}
+            onPress={() => { pokedexNav.request('pokedex'); router.push('/(drawer)/(tabs)/pokedex'); }}
           />
           <ShortcutButton
             emoji="⭐" label="Collection" sublabel="Mes cartes"
             accentColor={theme.primary} delay={260}
-            onPress={() => router.push('/(drawer)/(tabs)/pokedex?/tab=collection')}
+            onPress={() => { pokedexNav.request('collection'); router.push('/(drawer)/(tabs)/pokedex'); }}
           />
         </View>
 
@@ -569,7 +570,7 @@ export default function HomeScreen() {
               }}>
                 Dernières cartes
               </Text>
-              <Pressable onPress={() => router.push('/(drawer)/(tabs)/pokedex?tab=collection')}>
+              <Pressable onPress={() => { pokedexNav.request('collection'); router.push('/(drawer)/(tabs)/pokedex'); }}>
                 <Text style={{ fontSize: 12, fontWeight: '700', color: theme.textAccent }}>
                   Voir tout →
                 </Text>
