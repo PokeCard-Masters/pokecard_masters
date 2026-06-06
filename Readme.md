@@ -4,7 +4,7 @@
 
 **Application mobile de gestion de collection de cartes Pokémon TCG — ouvre des boosters, construis ta collection, suis ta progression.**
 
-[![CI](https://github.com/Agarthaxx/pokecard_masters/actions/workflows/test.yaml/badge.svg)](https://github.com/Agarthaxx/pokecard_masters/actions)
+[![CI](https://img.shields.io/github/actions/workflow/status/Agarthaxx/pokecard_masters/test.yaml?logo=githubactions&logoColor=white&label=CI)](https://github.com/Agarthaxx/pokecard_masters/actions)
 ![Python](https://img.shields.io/badge/Python-3.13-3776AB?logo=python&logoColor=white)
 ![Django](https://img.shields.io/badge/Django-5.2-092E20?logo=django&logoColor=white)
 ![React Native](https://img.shields.io/badge/React_Native-0.81-61DAFB?logo=react&logoColor=black)
