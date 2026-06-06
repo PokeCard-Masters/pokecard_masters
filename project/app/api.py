@@ -319,7 +319,7 @@ def open_booster(request):
             )
             if not created:
                 pc.quantity = F("quantity") + 1
-                pc.save(update_fields=["quantity"])
+                pc.save(update_fields=["quantity", "updated_at"])
 
     User.objects.filter(pk=user.pk).update(booster_count=F("booster_count") + 1)
     user.refresh_from_db(fields=["booster_count"])
