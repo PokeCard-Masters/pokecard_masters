@@ -73,16 +73,27 @@ export default function Pokedex() {
   const [mode, setMode] = useState<Mode>(tab === 'collection' ? 'collection' : 'pokedex');
   const [activeFilter, setActiveFilter] = useState<FilterKey>('all');
   const [query, setQuery] = useState('');
+  const [debouncedQuery, setDebouncedQuery] = useState('');
   const [ refreshing, setRefreshing ] = useState(false);
 
   const listRef = useRef<FlatList>(null);
   const totalPages = Math.max(1, Math.ceil(totalCount / PAGE_SIZE));
+
+  // Debounce : attend 400ms après la dernière frappe avant de lancer la recherche
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedQuery(query);
+      setPage(1);
+    }, 400);
+    return () => clearTimeout(timer);
+  }, [query]);
 
   // ── Fetch ──────────────────────────────────────────────────────────────────
   const fetchPokedex = useCallback(async (
     pageToLoad: number,
     currentMode: Mode,
     rarity: FilterKey,
+    search: string = '',
   ) => {
     if (!token) return;
     setLoading(true);
@@ -92,8 +103,9 @@ export default function Pokedex() {
         ? '/api/user/collection/pagination'
         : '/api/user/pagination';
       const rarityParam = rarity !== 'all' ? `&rarity=${encodeURIComponent(rarity)}` : '';
+      const searchParam = search.trim() ? `&search=${encodeURIComponent(search.trim())}` : '';
       const response = await apiFetch(
-        `${endpoint}?page=${pageToLoad}&limit=${PAGE_SIZE}${rarityParam}`,
+        `${endpoint}?page=${pageToLoad}&limit=${PAGE_SIZE}${rarityParam}${searchParam}`,
         token,
       );
 
@@ -112,8 +124,8 @@ export default function Pokedex() {
 
   useFocusEffect(
     useCallback(() => {
-      fetchPokedex(page, mode, activeFilter);
-    }, [page, mode, activeFilter, fetchPokedex])
+      fetchPokedex(page, mode, activeFilter, debouncedQuery);
+    }, [page, mode, activeFilter, debouncedQuery, fetchPokedex])
   )
 
   // ── Handlers ──────────────────────────────────────────────────────────────
@@ -132,12 +144,14 @@ export default function Pokedex() {
     setPage(1);
     setActiveFilter('all');
     setQuery('');
+    setDebouncedQuery('');
   }, []);
 
   const handleFilterChange = useCallback((key: FilterKey) => {
     setActiveFilter(key);
     setPage(1);
     setQuery('');
+    setDebouncedQuery('');
   }, []);
 
   const onRefresh = useCallback(async () => {
@@ -147,16 +161,6 @@ export default function Pokedex() {
   }, [page, mode, activeFilter, fetchPokedex]);
 
 
-  // ── Recherche locale ───────────────────────────────────────────────────────
-  const visiblePokemons = useMemo(() => {
-    const normalized = query.trim().toLowerCase();
-    if (!normalized) return pokemons;
-    return pokemons.filter(p =>
-      `${p.id} ${p.name} ${p.category ?? ''} ${p.rarity ?? ''}`
-        .toLowerCase()
-        .includes(normalized)
-    );
-  }, [pokemons, query]);
 
   const RARE_RARITIES = new Set(['One Shiny', 'One Star', 'Two Star', 'Three Star', 'Two Shiny', 'Crown']);
   const rarityCount = useMemo(
@@ -506,7 +510,7 @@ export default function Pokedex() {
       <StatusBar barStyle="dark-content" />
       <FlatList
         ref={listRef}
-        data={visiblePokemons}
+        data={pokemons}
         keyExtractor={item => `page${page}-${item.id}`}
         extraData={pokemons}
         numColumns={numCols}

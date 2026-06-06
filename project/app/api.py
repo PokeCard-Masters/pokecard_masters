@@ -346,7 +346,7 @@ def booster_count(request):
     return {"booster_count": user.booster_count}
 
 @api.get("/user/pagination", auth=jwt_auth)
-def pagination(request, page: int = 1, limit: int = 10, rarity: Optional[str] = None):
+def pagination(request, page: int = 1, limit: int = 10, rarity: Optional[str] = None, search: Optional[str] = None):
     claims = request.auth_user
     user_id = claims["sub"]
 
@@ -367,6 +367,8 @@ def pagination(request, page: int = 1, limit: int = 10, rarity: Optional[str] = 
             queryset = queryset.filter(rarity__in=tier)
         else:
             queryset = queryset.filter(rarity__icontains=rarity)
+    if search:
+        queryset = queryset.filter(name__icontains=search)
 
     paginator = Paginator(queryset, limit)
     page_obj = paginator.get_page(page)
@@ -385,7 +387,7 @@ def pagination(request, page: int = 1, limit: int = 10, rarity: Optional[str] = 
 
 
 @api.get("/user/collection/pagination", auth=jwt_auth)
-def collection_pagination(request, page: int = 1, limit: int = 10, rarity: Optional[str] = None):
+def collection_pagination(request, page: int = 1, limit: int = 10, rarity: Optional[str] = None, search: Optional[str] = None):
     claims = request.auth_user
     user_id = claims["sub"]
 
@@ -398,6 +400,8 @@ def collection_pagination(request, page: int = 1, limit: int = 10, rarity: Optio
             queryset = queryset.filter(card__rarity__in=tier)
         else:
             queryset = queryset.filter(card__rarity__icontains=rarity)
+    if search:
+        queryset = queryset.filter(card__name__icontains=search)
 
     paginator = Paginator(queryset, limit)
     page_obj = paginator.get_page(page)
