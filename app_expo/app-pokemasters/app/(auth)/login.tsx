@@ -64,7 +64,7 @@ export default function LoginScreen() {
     } else {
       hapticSuccess();
       await playSuccessSound();
-      setTimeout(() => router.replace('/(drawer)/(tabs)/booster'), 400);
+      setTimeout(() => router.replace('/'), 400);
     }
   };
 
