@@ -1,7 +1,7 @@
 import { ActivityIndicator, FlatList, Image, Pressable, StatusBar, Text, TextInput, View, useWindowDimensions, } from 'react-native';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
-import { useLocalSearchParams } from 'expo-router';
+import { pokedexNav } from '@/constants/pokedexNav';
 import { useAuth } from '@/context/AuthContext';
 import { RefreshControl } from 'react-native';
 import { useTheme } from '@/hooks/useTheme';
@@ -63,14 +63,12 @@ export default function Pokedex() {
   const numCols = isPhone ? 2 : width < 1024 ? 3 : 4;
   const sidePad = isPhone ? 16 : 24;
 
-  const { tab } = useLocalSearchParams<{ tab?: Mode }>();
-
   const [pokemons, setPokemons] = useState<Pokemon[]>([]);
   const [page, setPage] = useState(1);
   const [totalCount, setTotalCount] = useState(0);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [mode, setMode] = useState<Mode>(tab === 'collection' ? 'collection' : 'pokedex');
+  const [mode, setMode] = useState<Mode>('pokedex');
   const [activeFilter, setActiveFilter] = useState<FilterKey>('all');
   const [query, setQuery] = useState('');
   const [debouncedQuery, setDebouncedQuery] = useState('');
@@ -124,7 +122,14 @@ export default function Pokedex() {
 
   useFocusEffect(
     useCallback(() => {
-      fetchPokedex(page, mode, activeFilter, debouncedQuery);
+      const requested = pokedexNav.consume();
+      if (requested !== null && requested !== mode) {
+        setMode(requested);
+        setPage(1);
+        fetchPokedex(1, requested, activeFilter, debouncedQuery);
+      } else {
+        fetchPokedex(page, mode, activeFilter, debouncedQuery);
+      }
     }, [page, mode, activeFilter, debouncedQuery, fetchPokedex])
   )
 
