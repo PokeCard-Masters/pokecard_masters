@@ -11,6 +11,7 @@ import {
   useWindowDimensions,
   View,
 } from 'react-native';
+import { useFocusEffect } from '@react-navigation/native';
 import { useAuth } from '@/context/AuthContext';
 import { apiFetch } from '@/services/api';
 import { useTheme } from '@/hooks/useTheme';
@@ -350,6 +351,18 @@ export default function BoosterOpening() {
   const packRotZInterp = packRotZ.interpolate({ inputRange: [-1, 0, 1], outputRange: ['-6deg', '0deg', '6deg'] });
   const glowOpacity = packGlow.interpolate({ inputRange: [0, 1], outputRange: [0, 0.5] });
   const rareCount = cards.filter(c => RARE_RARITIES.has(c.rarity)).length;
+
+  // ── Chargement initial du compteur ─────────────────────────────────────────
+
+  useFocusEffect(
+    useCallback(() => {
+      if (!token) return;
+      apiFetch('/api/booster/count', token)
+        .then(r => r.ok ? r.json() : null)
+        .then(data => { if (data) setBoosterCount(data.booster_count); })
+        .catch(() => {});
+    }, [token])
+  );
 
   // ── API ────────────────────────────────────────────────────────────────────
 
