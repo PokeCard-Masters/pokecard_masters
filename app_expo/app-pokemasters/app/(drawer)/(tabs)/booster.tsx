@@ -1,22 +1,9 @@
+import {Animated,Easing, Image, Pressable, ScrollView, StatusBar, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import {
-  Animated,
-  Easing,
-  Image,
-  Pressable,
-  ScrollView,
-  StatusBar,
-  StyleSheet,
-  Text,
-  useWindowDimensions,
-  View,
-} from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { useAuth } from '@/context/AuthContext';
-import { apiFetch } from '@/services/api';
 import { useTheme } from '@/hooks/useTheme';
-
-
+import { apiFetch } from '@/services/api';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
