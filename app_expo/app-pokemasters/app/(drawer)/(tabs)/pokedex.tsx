@@ -22,6 +22,7 @@ type Pokemon = {
 type PaginatedResponse = {
   items: Pokemon[];
   count: number;
+  rare_count: number;
 };
 
 type Mode = 'pokedex' | 'collection';
@@ -66,6 +67,7 @@ export default function Pokedex() {
   const [pokemons, setPokemons] = useState<Pokemon[]>([]);
   const [page, setPage] = useState(1);
   const [totalCount, setTotalCount] = useState(0);
+  const [totalRareCount, setTotalRareCount] = useState(0);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [mode, setMode] = useState<Mode>('pokedex');
@@ -113,6 +115,7 @@ export default function Pokedex() {
 
       setPokemons(data.items);
       setTotalCount(data.count);
+      setTotalRareCount(data.rare_count);
     } catch (err: any) {
       setError('Impossible de charger le Pokédex. Vérifie ta connexion.');
     } finally {
@@ -166,12 +169,6 @@ export default function Pokedex() {
   }, [page, mode, activeFilter, fetchPokedex]);
 
 
-
-  const RARE_RARITIES = new Set(['One Shiny', 'One Star', 'Two Star', 'Three Star', 'Two Shiny', 'Crown']);
-  const rarityCount = useMemo(
-    () => pokemons.filter(p => p.rarity != null && RARE_RARITIES.has(p.rarity)).length,
-    [pokemons]
-  );
 
   const totalOwned = useMemo(
     () => pokemons.reduce((acc, p) => acc + p.quantity, 0),
@@ -290,8 +287,8 @@ export default function Pokedex() {
         <View style={{ marginTop: 16, flexDirection: 'row', gap: 10 }}>
           {[
             { label: 'Total', value: totalCount },
-            { label: 'Rares +', value: rarityCount },
-            { label: 'Possédées', value: totalOwned },
+            { label: 'Rares +', value: totalRareCount },
+            ...(mode === 'collection' ? [{ label: 'Possédées', value: totalOwned }] : []),
           ].map(({ label, value }) => (
             <View key={label} style={{
               flex: 1, alignItems: 'center', borderRadius: 18,
@@ -396,7 +393,7 @@ export default function Pokedex() {
         />
       </View>
     </View>
-  ), [query, mode, activeFilter, totalCount, rarityCount, totalOwned,
+  ), [query, mode, activeFilter, totalCount, totalRareCount, totalOwned,
     theme.primary, theme.textAccent, theme.card, theme.border, isPhone,
     handleModeChange, handleFilterChange]);
 
