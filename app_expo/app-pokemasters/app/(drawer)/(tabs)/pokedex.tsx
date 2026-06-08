@@ -182,13 +182,14 @@ export default function Pokedex() {
 
     return (
       <Pressable
-        style={({ pressed }) => ({
+        android_ripple={{ color: style.border, borderless: false }}
+        style={{
           flex: 1, borderRadius: 24, borderWidth: 2,
           borderColor: style.border, backgroundColor: '#ffffff',
-          padding: 12, opacity: pressed ? 0.82 : 1,
+          padding: 12,
           shadowColor: '#000', shadowOpacity: 0.06,
           shadowRadius: 8, elevation: 2,
-        })}
+        }}
       >
         {/* Header */}
         <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
