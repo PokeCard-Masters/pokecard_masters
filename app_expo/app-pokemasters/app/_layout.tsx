@@ -2,6 +2,7 @@ import { DarkTheme, DefaultTheme, ThemeProvider } from "@react-navigation/native
 import { AuthProvider, useAuth } from "@/context/AuthContext";
 import { Stack, useRouter, useSegments } from "expo-router";
 import { RegionProvider } from '@/context/RegionContext';
+import { SafeAreaProvider } from "react-native-safe-area-context";
 import { useColorScheme } from "react-native";
 import { StatusBar } from "expo-status-bar";
 import { useEffect } from "react";
@@ -47,13 +48,15 @@ export default function RootLayout() {
   const colorScheme = useColorScheme();
 
   return (
-    <ThemeProvider value={colorScheme === "dark" ? DarkTheme : DefaultTheme}>
-      <AuthProvider>
-        <RegionProvider>
-          <RootNavigator />
-        </RegionProvider>
-      </AuthProvider>
-      <StatusBar style="auto" />
-    </ThemeProvider>
+    <SafeAreaProvider>
+      <ThemeProvider value={colorScheme === "dark" ? DarkTheme : DefaultTheme}>
+        <AuthProvider>
+          <RegionProvider>
+            <RootNavigator />
+          </RegionProvider>
+        </AuthProvider>
+        <StatusBar style="auto" />
+      </ThemeProvider>
+    </SafeAreaProvider>
   );
 };
