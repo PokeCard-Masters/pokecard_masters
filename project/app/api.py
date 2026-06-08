@@ -372,6 +372,7 @@ def pagination(request, page: int = 1, limit: int = 10, rarity: Optional[str] = 
 
     paginator = Paginator(queryset, limit)
     page_obj = paginator.get_page(page)
+    rare_count = queryset.filter(rarity__in=RARITY_TIERS["rare"]).count()
 
     return {
         "items": [
@@ -383,6 +384,7 @@ def pagination(request, page: int = 1, limit: int = 10, rarity: Optional[str] = 
             for card in page_obj
         ],
         "count": paginator.count,
+        "rare_count": rare_count,
     }
 
 
@@ -405,6 +407,7 @@ def collection_pagination(request, page: int = 1, limit: int = 10, rarity: Optio
 
     paginator = Paginator(queryset, limit)
     page_obj = paginator.get_page(page)
+    rare_count = queryset.filter(card__rarity__in=RARITY_TIERS["rare"]).count()
 
     return {
         "items": [
@@ -416,6 +419,7 @@ def collection_pagination(request, page: int = 1, limit: int = 10, rarity: Optio
             for pc in page_obj
         ],
         "count": paginator.count,
+        "rare_count": rare_count,
     }
 
 
