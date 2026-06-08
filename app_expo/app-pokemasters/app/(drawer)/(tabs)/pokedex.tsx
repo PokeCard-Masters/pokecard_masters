@@ -1,9 +1,9 @@
-import { ActivityIndicator, FlatList, Image, Pressable, StatusBar, Text, TextInput, View, useWindowDimensions, } from 'react-native';
+import { ActivityIndicator, FlatList, Image, Pressable, RefreshControl, Text, TextInput, View, useWindowDimensions, } from 'react-native';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
 import { pokedexNav } from '@/constants/pokedexNav';
 import { useAuth } from '@/context/AuthContext';
-import { RefreshControl } from 'react-native';
 import { useTheme } from '@/hooks/useTheme';
 import { apiFetch } from '@/services/api';
 
@@ -59,6 +59,7 @@ export default function Pokedex() {
   const { token } = useAuth();
   const theme = useTheme();
   const { width } = useWindowDimensions();
+  const insets = useSafeAreaInsets();
 
   const isPhone = width < 640;
   const numCols = isPhone ? 2 : width < 1024 ? 3 : 4;
@@ -550,7 +551,6 @@ export default function Pokedex() {
   // ── JSX ────────────────────────────────────────────────────────────────────
   return (
     <View style={{ flex: 1, backgroundColor: theme.bg }}>
-      <StatusBar barStyle="dark-content" />
       <FlatList
         ref={listRef}
         data={pokemons}
@@ -561,8 +561,8 @@ export default function Pokedex() {
         columnWrapperStyle={{ gap: 12 }}
         contentContainerStyle={{
           paddingHorizontal: sidePad,
-          paddingTop: 24,
-          paddingBottom: 40,
+          paddingTop: insets.top + 24,
+          paddingBottom: insets.bottom + 24,
         }}
         ItemSeparatorComponent={() => <View style={{ height: 12 }} />}
         ListHeaderComponent={headerElement}

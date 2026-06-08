@@ -1,5 +1,6 @@
-import {Animated,Easing, Image, Pressable, ScrollView, StatusBar, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
+import {Animated,Easing, Image, Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
 import { useAuth } from '@/context/AuthContext';
 import { useTheme } from '@/hooks/useTheme';
@@ -296,6 +297,7 @@ export default function BoosterOpening() {
   const { token } = useAuth();
   const { width, height } = useWindowDimensions();
   const theme = useTheme();
+  const insets = useSafeAreaInsets();
   const isPhone = width < 640;
   const isTablet = width >= 640 && width < 1024;
   const isDesktop = width >= 1024;
@@ -429,16 +431,14 @@ export default function BoosterOpening() {
 
   return (
     <View style={{ flex: 1, backgroundColor: theme.bg }}>
-      <StatusBar barStyle="dark-content" />
-
       <View style={{
         flex: 1,
         alignSelf: 'center',
         width: '100%',
         maxWidth: pageMaxWidth,
         paddingHorizontal: sidePadding,
-        paddingTop: 26,
-        paddingBottom: 18,
+        paddingTop: insets.top + 26,
+        paddingBottom: insets.bottom + 18,
       }}>
 
         {/* ── Header : mobile/tablet uniquement, ou phase revealed ── */}

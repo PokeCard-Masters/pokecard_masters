@@ -1,13 +1,14 @@
-import { Animated, Easing, Image, Pressable, ScrollView, StatusBar, Text, useWindowDimensions, View, } from 'react-native';
-import { getRank } from '@/constants/ranks';
+import { Animated, Easing, Image, Pressable, ScrollView, Text, useWindowDimensions, View, } from 'react-native';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { RefreshControl } from 'react-native-gesture-handler';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
+import { pokedexNav } from '@/constants/pokedexNav';
 import { useAuth } from '@/context/AuthContext';
 import { useTheme } from '@/hooks/useTheme';
+import { getRank } from '@/constants/ranks';
 import { apiFetch } from '@/services/api';
 import { useRouter } from 'expo-router';
-import { pokedexNav } from '@/constants/pokedexNav';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -263,6 +264,7 @@ function ShortcutButton({
 }) {
   const translateY = useRef(new Animated.Value(20)).current;
   const opacity = useRef(new Animated.Value(0)).current;
+  const pressScale = useRef(new Animated.Value(1)).current;
 
   useEffect(() => {
     const t = setTimeout(() => {
@@ -274,20 +276,26 @@ function ShortcutButton({
     return () => clearTimeout(t);
   }, []);
 
+  const handlePressIn = () =>
+    Animated.timing(pressScale, { toValue: 0.97, duration: 80, useNativeDriver: true }).start();
+  const handlePressOut = () =>
+    Animated.timing(pressScale, { toValue: 1, duration: 120, useNativeDriver: true }).start();
+
   return (
-    <Animated.View style={{ flex: 1, transform: [{ translateY }], opacity }}>
+    <Animated.View style={{ flex: 1, transform: [{ translateY }, { scale: pressScale }], opacity }}>
       <Pressable
         onPress={onPress}
-        style={({ pressed }) => ({
+        onPressIn={handlePressIn}
+        onPressOut={handlePressOut}
+        style={{
           borderRadius: 24, padding: 18, alignItems: 'center',
           backgroundColor: accent ? accentColor : '#ffffff',
           borderWidth: 1,
           borderColor: accent ? accentColor : '#E8E3C8',
           shadowColor: accent ? accentColor : '#000',
-          shadowOpacity: pressed ? 0.05 : accent ? 0.2 : 0.06,
-          shadowRadius: 12, elevation: pressed ? 1 : accent ? 5 : 2,
-          transform: [{ scale: pressed ? 0.97 : 1 }],
-        })}
+          shadowOpacity: accent ? 0.2 : 0.06,
+          shadowRadius: 12, elevation: accent ? 5 : 2,
+        }}
       >
         <View style={{
           width: 48, height: 48, borderRadius: 999,
@@ -343,6 +351,7 @@ export default function HomeScreen() {
   const theme = useTheme();
   const router = useRouter();
   const { width } = useWindowDimensions();
+  const insets = useSafeAreaInsets();
 
   const isPhone = width < 640;
   const sidePad = isPhone ? 16 : 24;
@@ -409,14 +418,12 @@ export default function HomeScreen() {
 
   return (
     <View style={{ flex: 1, backgroundColor: theme.bg }}>
-      <StatusBar barStyle="dark-content" />
-
       <ScrollView
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
         contentContainerStyle={{
           paddingHorizontal: sidePad,
-          paddingTop: 24,
-          paddingBottom: 52,
+          paddingTop: insets.top + 24,
+          paddingBottom: insets.bottom + 24,
           alignSelf: 'center',
           width: '100%',
           maxWidth: maxWidth,
