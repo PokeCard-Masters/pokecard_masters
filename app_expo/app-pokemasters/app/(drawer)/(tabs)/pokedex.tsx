@@ -27,7 +27,7 @@ type PaginatedResponse = {
 type Mode = 'pokedex' | 'collection';
 type FilterKey = 'all' | 'common' | 'uncommon' | 'rare';
 
-const PAGE_SIZE = 10;
+const PAGE_SIZE = 8;
 
 // ─── Rarity styles ────────────────────────────────────────────────────────────
 
