@@ -1,4 +1,5 @@
 from django.db.models import F, OuterRef, Subquery, IntegerField, Value
+from datetime import date
 from django.contrib.auth.hashers import make_password, check_password
 from .authentification import GoogleJWTAuth, create_app_jwt
 from django.db.models.functions import Coalesce
@@ -97,6 +98,8 @@ class BoosterCardOut(Schema):
 class BoosterCountOut(Schema):
     cards: list[BoosterCardOut]
     booster_count: int
+    daily_booster_count: int
+    booster_remaining: int
 
 
 class ChangePasswordIn(Schema):
@@ -269,10 +272,12 @@ RARE_WEIGHTS = {
 }
 
 
+DAILY_BOOSTER_LIMIT = 2
+
 @api.post(
     "/booster/open",
     auth=jwt_auth,
-    response={200: BoosterCountOut, 404: ErrorOut, 500: ErrorOut},
+    response={200: BoosterCountOut, 404: ErrorOut, 429: ErrorOut, 500: ErrorOut},
 )
 def open_booster(request):
     claims = request.auth_user
@@ -283,6 +288,13 @@ def open_booster(request):
             user = User.objects.select_for_update().get(user_id=user_id)
         except User.DoesNotExist:
             return 404, {"detail": "User not found"}
+
+        today = date.today()
+        if user.last_booster_opened != today:
+            user.daily_booster_count = 0
+
+        if user.daily_booster_count >= DAILY_BOOSTER_LIMIT:
+            return 429, {"detail": "Tu as déjà ouvert tes 2 boosters du jour. Reviens demain !"}
 
         common_cards = list(Card.objects.filter(rarity__in=RARITY_TIERS["common"]))
         uncommon_cards = list(Card.objects.filter(rarity__in=RARITY_TIERS["uncommon"]))
@@ -321,6 +333,10 @@ def open_booster(request):
                 pc.quantity = F("quantity") + 1
                 pc.save(update_fields=["quantity", "updated_at"])
 
+        user.daily_booster_count += 1
+        user.last_booster_opened = today
+        user.save(update_fields=["daily_booster_count", "last_booster_opened"])
+
     User.objects.filter(pk=user.pk).update(booster_count=F("booster_count") + 1)
     user.refresh_from_db(fields=["booster_count"])
 
@@ -337,13 +353,21 @@ def open_booster(request):
             for c in pulled
         ],
         "booster_count": user.booster_count,
+        "daily_booster_count": user.daily_booster_count,
+        "booster_remaining": max(0, DAILY_BOOSTER_LIMIT - user.daily_booster_count),
     }
 
 @api.get("/booster/count", auth=jwt_auth, response={200: dict})
 def booster_count(request):
     claims = request.auth_user
     user = User.objects.get(user_id=claims["sub"])
-    return {"booster_count": user.booster_count}
+    today = date.today()
+    daily_count = user.daily_booster_count if user.last_booster_opened == today else 0
+    return {
+        "booster_count": user.booster_count,
+        "daily_booster_count": daily_count,
+        "booster_remaining": max(0, DAILY_BOOSTER_LIMIT - daily_count),
+    }
 
 @api.get("/user/pagination", auth=jwt_auth)
 def pagination(request, page: int = 1, limit: int = 10, rarity: Optional[str] = None, search: Optional[str] = None):

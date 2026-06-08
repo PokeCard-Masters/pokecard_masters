@@ -41,7 +41,6 @@ const RARITY_CONFIGS: Record<string, RarityConfig> = {
   'Crown': { label: '♛ CROWN', textColor: '#b91c1c', cardBorder: '#ef5350', shimmer: true },
 };
 
-const RARE_RARITIES = new Set(['Two Star', 'Three Star', 'Two Shiny', 'Crown', 'One Star']);
 
 function rarityConfig(rarity: string): RarityConfig {
   return RARITY_CONFIGS[rarity] ?? {
@@ -291,6 +290,37 @@ function FlippableCard({
   );
 }
 
+// ─── DailyQuota ───────────────────────────────────────────────────────────────
+
+function DailyQuota({ remaining }: { remaining: number }) {
+  const total = 2;
+  const dotColor = remaining === 0 ? '#ef4444' : remaining === 1 ? '#f59e0b' : '#22c55e';
+  const label = remaining === 0
+    ? 'Reviens demain !'
+    : `${remaining} booster${remaining > 1 ? 's' : ''} restant${remaining > 1 ? 's' : ''} aujourd'hui`;
+
+  return (
+    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 10 }}>
+      <View style={{ flexDirection: 'row', gap: 5 }}>
+        {Array.from({ length: total }).map((_, i) => (
+          <View
+            key={i}
+            style={{
+              width: 10, height: 10, borderRadius: 5,
+              backgroundColor: i < remaining ? dotColor : '#e2e8f0',
+              borderWidth: 1.5,
+              borderColor: i < remaining ? dotColor : '#cbd5e1',
+            }}
+          />
+        ))}
+      </View>
+      <Text style={{ fontSize: 12, fontWeight: '700', color: remaining === 0 ? '#ef4444' : '#64748b' }}>
+        {label}
+      </Text>
+    </View>
+  );
+}
+
 // ─── Main ─────────────────────────────────────────────────────────────────────
 
 export default function BoosterOpening() {
@@ -323,6 +353,8 @@ export default function BoosterOpening() {
   const [particleTrigger, setParticleTrigger] = useState(false);
   const [cards, setCards] = useState<Card[]>([]);
   const [boosterCount, setBoosterCount] = useState(0);
+  const [dailyBoosterCount, setDailyBoosterCount] = useState(0);
+  const [boosterRemaining, setBoosterRemaining] = useState(2);
 
   const packScale = useRef(new Animated.Value(1)).current;
   const packRotZ = useRef(new Animated.Value(0)).current;
@@ -337,8 +369,6 @@ export default function BoosterOpening() {
 
   const packRotZInterp = packRotZ.interpolate({ inputRange: [-1, 0, 1], outputRange: ['-6deg', '0deg', '6deg'] });
   const glowOpacity = packGlow.interpolate({ inputRange: [0, 1], outputRange: [0, 0.5] });
-  const rareCount = cards.filter(c => RARE_RARITIES.has(c.rarity)).length;
-
   // ── Chargement initial du compteur ─────────────────────────────────────────
 
   useFocusEffect(
@@ -346,7 +376,13 @@ export default function BoosterOpening() {
       if (!token) return;
       apiFetch('/api/booster/count', token)
         .then(r => r.ok ? r.json() : null)
-        .then(data => { if (data) setBoosterCount(data.booster_count); })
+        .then(data => {
+          if (data) {
+            setBoosterCount(data.booster_count);
+            setDailyBoosterCount(data.daily_booster_count ?? 0);
+            setBoosterRemaining(data.booster_remaining ?? 2);
+          }
+        })
         .catch(() => { });
     }, [token])
   );
@@ -356,19 +392,37 @@ export default function BoosterOpening() {
   const fetchBooster = useCallback(async (): Promise<Card[]> => {
     if (!token) throw new Error('Token manquant');
     const response = await apiFetch('/api/booster/open', token, { method: 'POST' });
+    if (response.status === 429) {
+      setBoosterRemaining(0);
+      throw new Error('daily_limit');
+    }
     if (!response.ok) throw new Error(`Erreur serveur : ${response.status}`);
-    const data: { cards: Card[]; booster_count: number } = await response.json();
+    const data: { cards: Card[]; booster_count: number; daily_booster_count: number; booster_remaining: number } = await response.json();
 
     setCards(data.cards);
     setBoosterCount(data.booster_count);
+    setDailyBoosterCount(data.daily_booster_count);
+    setBoosterRemaining(data.booster_remaining);
 
     return data.cards;
   }, [token]);
 
+  // ── Reset ──────────────────────────────────────────────────────────────────
+
+  const resetAll = useCallback(() => {
+    packScale.setValue(1); packRotZ.setValue(0); packOpacity.setValue(1);
+    packGlow.setValue(0); whiteFlash.setValue(0);
+    revealOpacity.setValue(0); revealY.setValue(30);
+    apiPromiseRef.current = null;
+    setParticleTrigger(false);
+    setCards([]);
+    setPhase('idle');
+  }, []);
+
   // ── Ouverture ──────────────────────────────────────────────────────────────
 
   const handleOpen = useCallback(() => {
-    if (phase !== 'idle') return;
+    if (phase !== 'idle' || boosterRemaining === 0) return;
     setPhase('shaking');
 
     apiPromiseRef.current = fetchBooster().catch(err => {
@@ -404,7 +458,11 @@ export default function BoosterOpening() {
         ]),
       ]).start(() => {
         clearTimeout(resetParticles);
-        apiPromiseRef.current?.then(() => {
+        apiPromiseRef.current?.then((result) => {
+          if (!result || result.length === 0) {
+            setTimeout(resetAll, 300);
+            return;
+          }
           setPhase('revealed');
           Animated.parallel([
             Animated.timing(revealOpacity, { toValue: 1, duration: 350, useNativeDriver: true }),
@@ -413,19 +471,7 @@ export default function BoosterOpening() {
         });
       });
     });
-  }, [phase, fetchBooster]);
-
-  // ── Reset ──────────────────────────────────────────────────────────────────
-
-  const resetAll = useCallback(() => {
-    packScale.setValue(1); packRotZ.setValue(0); packOpacity.setValue(1);
-    packGlow.setValue(0); whiteFlash.setValue(0);
-    revealOpacity.setValue(0); revealY.setValue(30);
-    apiPromiseRef.current = null;
-    setParticleTrigger(false);
-    setCards([]);
-    setPhase('idle');
-  }, []);
+  }, [phase, fetchBooster, boosterRemaining, resetAll]);
 
   // ── Render ─────────────────────────────────────────────────────────────────
 
@@ -470,18 +516,19 @@ export default function BoosterOpening() {
               </View>
             </View>
 
-            {boosterCount > 0 && (
-              <View style={{ flexDirection: 'row', gap: 12, marginTop: 18 }}>
-                <View style={{ flex: 1, backgroundColor: theme.bg, borderRadius: 18, paddingVertical: 12, alignItems: 'center' }}>
-                  <Text style={{ fontSize: 20, fontWeight: '900', color: '#0f172a' }}>{boosterCount}</Text>
-                  <Text style={{ marginTop: 3, fontSize: 11, fontWeight: '700', color: '#64748b' }}>Boosters ouverts</Text>
-                </View>
-                <View style={{ flex: 1, backgroundColor: theme.bg, borderRadius: 18, paddingVertical: 12, alignItems: 'center' }}>
-                  <Text style={{ fontSize: 20, fontWeight: '900', color: '#0f172a' }}>{rareCount}</Text>
-                  <Text style={{ marginTop: 3, fontSize: 11, fontWeight: '700', color: '#64748b' }}>Rares obtenus</Text>
-                </View>
+            <View style={{ flexDirection: 'row', gap: 12, marginTop: 18 }}>
+              <View style={{ flex: 1, backgroundColor: theme.bg, borderRadius: 18, paddingVertical: 12, alignItems: 'center' }}>
+                <Text style={{ fontSize: 20, fontWeight: '900', color: '#0f172a' }}>{boosterCount}</Text>
+                <Text style={{ marginTop: 3, fontSize: 11, fontWeight: '700', color: '#64748b' }}>Boosters ouverts</Text>
               </View>
-            )}
+              <View style={{ flex: 1, backgroundColor: theme.bg, borderRadius: 18, paddingVertical: 12, alignItems: 'center' }}>
+                <Text style={{
+                  fontSize: 20, fontWeight: '900',
+                  color: boosterRemaining === 0 ? '#ef4444' : boosterRemaining === 1 ? '#f59e0b' : '#22c55e',
+                }}>{boosterRemaining}</Text>
+                <Text style={{ marginTop: 3, fontSize: 11, fontWeight: '700', color: '#64748b' }}>Restants auj.</Text>
+              </View>
+            </View>
           </View>
         )}
 
@@ -600,33 +647,31 @@ export default function BoosterOpening() {
               <View style={{ alignItems: 'center', marginTop: 18 }}>
                 <Pressable
                   onPress={handleOpen}
-                  disabled={phase !== 'idle'}
+                  disabled={phase !== 'idle' || boosterRemaining === 0}
                   style={{
                     minWidth: isPhone ? 240 : 280,
                     borderRadius: 999, paddingVertical: 16, paddingHorizontal: 28,
-                    backgroundColor: phase !== 'idle' ? '#E2E8F0' : theme.primary,
+                    backgroundColor: (phase !== 'idle' || boosterRemaining === 0) ? '#E2E8F0' : theme.primary,
                     alignItems: 'center',
-                    borderWidth: phase !== 'idle' ? 1 : 0, borderColor: '#CBD5E1',
-                    shadowColor: phase === 'idle' ? theme.primary : 'transparent',
-                    shadowOpacity: phase === 'idle' ? 0.2 : 0,
-                    shadowRadius: 14, elevation: phase === 'idle' ? 5 : 0,
+                    borderWidth: (phase !== 'idle' || boosterRemaining === 0) ? 1 : 0, borderColor: '#CBD5E1',
+                    shadowColor: (phase === 'idle' && boosterRemaining > 0) ? theme.primary : 'transparent',
+                    shadowOpacity: (phase === 'idle' && boosterRemaining > 0) ? 0.2 : 0,
+                    shadowRadius: 14, elevation: (phase === 'idle' && boosterRemaining > 0) ? 5 : 0,
                   }}
                 >
                   <Text style={{
                     fontSize: 13, fontWeight: '900', letterSpacing: 1.5,
-                    color: phase !== 'idle' ? '#64748b' : '#ffffff',
+                    color: (phase !== 'idle' || boosterRemaining === 0) ? '#64748b' : '#ffffff',
                   }}>
-                    {phase === 'idle' ? '✦  OUVRIR LE BOOSTER' : 'OUVERTURE EN COURS…'}
+                    {boosterRemaining === 0
+                      ? '🔒  LIMITE ATTEINTE'
+                      : phase === 'idle'
+                      ? '✦  OUVRIR LE BOOSTER'
+                      : 'OUVERTURE EN COURS…'}
                   </Text>
                 </Pressable>
 
-                {phase === 'idle' && (
-                  <Text style={{ marginTop: 12, fontSize: 12, color: '#94a3b8', fontWeight: '600' }}>
-                    {boosterCount === 0
-                      ? 'Appuie pour révéler tes cartes'
-                      : `${boosterCount} booster${boosterCount > 1 ? 's' : ''} ouvert${boosterCount > 1 ? 's' : ''}`}
-                  </Text>
-                )}
+                {phase === 'idle' && <DailyQuota remaining={boosterRemaining} />}
               </View>
             </View>{/* ── fin pack + bouton ── */}
 
@@ -668,8 +713,11 @@ export default function BoosterOpening() {
                       <Text style={{ marginTop: 3, fontSize: 11, fontWeight: '700', color: '#64748b' }}>Boosters ouverts</Text>
                     </View>
                     <View style={{ flex: 1, backgroundColor: theme.bg, borderRadius: 18, paddingVertical: 16, alignItems: 'center' }}>
-                      <Text style={{ fontSize: 24, fontWeight: '900', color: theme.primary }}>{rareCount}</Text>
-                      <Text style={{ marginTop: 3, fontSize: 11, fontWeight: '700', color: '#64748b' }}>Rares (session)</Text>
+                      <Text style={{
+                        fontSize: 24, fontWeight: '900',
+                        color: boosterRemaining === 0 ? '#ef4444' : boosterRemaining === 1 ? '#f59e0b' : '#22c55e',
+                      }}>{boosterRemaining}</Text>
+                      <Text style={{ marginTop: 3, fontSize: 11, fontWeight: '700', color: '#64748b' }}>Restants auj.</Text>
                     </View>
                   </View>
 
@@ -753,9 +801,14 @@ export default function BoosterOpening() {
                 }}
               >
                 <Text style={{ fontSize: 12, fontWeight: '900', letterSpacing: 1.3, color: '#64748b' }}>
-                  ↩  OUVRIR UN AUTRE BOOSTER
+                  {boosterRemaining > 0 ? '↩  OUVRIR UN AUTRE BOOSTER' : '↩  RETOUR'}
                 </Text>
               </Pressable>
+              {boosterRemaining === 0 && (
+                <View style={{ alignItems: 'center', marginTop: 10 }}>
+                  <DailyQuota remaining={0} />
+                </View>
+              )}
             </ScrollView>
           </Animated.View>
         )}
