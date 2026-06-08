@@ -28,7 +28,7 @@ type PaginatedResponse = {
 type Mode = 'pokedex' | 'collection';
 type FilterKey = 'all' | 'common' | 'uncommon' | 'rare';
 
-const PAGE_SIZE = 8;
+const PAGE_SIZE = 12;
 
 // ─── Rarity styles ────────────────────────────────────────────────────────────
 
@@ -451,58 +451,99 @@ export default function Pokedex() {
   };
 
   // ── Footer / Pagination ────────────────────────────────────────────────────
+  const pageButtons = useMemo(() => {
+    const pages: (number | '...')[] = [];
+    if (totalPages <= 7) {
+      for (let i = 1; i <= totalPages; i++) pages.push(i);
+    } else {
+      const left = Math.max(2, page - 1);
+      const right = Math.min(totalPages - 1, page + 1);
+      pages.push(1);
+      if (left > 2) pages.push('...');
+      for (let i = left; i <= right; i++) pages.push(i);
+      if (right < totalPages - 1) pages.push('...');
+      pages.push(totalPages);
+    }
+    return pages;
+  }, [page, totalPages]);
+
   const renderFooter = () => (
-    <View style={{ marginTop: 20 }}>
+    <View style={{ marginTop: 24, marginBottom: 8, alignItems: 'center', gap: 10 }}>
+
+      {/* Barre pagination */}
       <View style={{
-        flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-        borderRadius: 24, borderWidth: 1, borderColor: theme.border,
-        backgroundColor: 'rgba(255,255,255,0.85)', paddingHorizontal: 14, paddingVertical: 10,
+        flexDirection: 'row', alignItems: 'center', gap: 4,
+        backgroundColor: '#ffffff', borderRadius: 999,
+        borderWidth: 1, borderColor: theme.border,
+        paddingHorizontal: 10, paddingVertical: 8,
+        shadowColor: '#000', shadowOpacity: 0.07, shadowRadius: 12, elevation: 3,
       }}>
 
-        {/* ✅ Bouton précédent — couleur accent région */}
+        {/* ← */}
         <Pressable
           onPress={() => goToPage(page - 1)}
           disabled={page === 1 || loading}
           style={{
-            borderRadius: 18, paddingHorizontal: 20, paddingVertical: 12,
-            backgroundColor: page === 1 || loading ? '#F1F5F9' : theme.accent,
+            width: 36, height: 36, borderRadius: 999,
+            alignItems: 'center', justifyContent: 'center',
+            backgroundColor: page === 1 || loading ? '#F1F5F9' : theme.primary + '18',
           }}
         >
-          <Text style={{
-            fontWeight: '800',
-            color: page === 1 || loading ? '#94a3b8' : '#0f172a',
-          }}>
-            ← Préc.
+          <Text style={{ fontSize: 15, fontWeight: '900', color: page === 1 || loading ? '#cbd5e1' : theme.primary }}>
+            ‹
           </Text>
         </Pressable>
 
-        {/* Infos page */}
-        <View style={{ alignItems: 'center' }}>
-          <Text style={{ fontSize: 14, fontWeight: '900', color: '#0f172a' }}>
-            {page} / {totalPages}
-          </Text>
-          <Text style={{ fontSize: 10, color: '#94a3b8', marginTop: 2 }}>
-            {totalCount} cartes
-          </Text>
-        </View>
+        {/* Numéros */}
+        {pageButtons.map((p, i) =>
+          p === '...' ? (
+            <Text key={`d${i}`} style={{ fontSize: 13, color: '#94a3b8', fontWeight: '700', paddingHorizontal: 2 }}>
+              ···
+            </Text>
+          ) : (
+            <Pressable
+              key={p}
+              onPress={() => goToPage(p)}
+              disabled={loading}
+              style={{
+                width: 36, height: 36, borderRadius: 999,
+                alignItems: 'center', justifyContent: 'center',
+                backgroundColor: p === page ? theme.primary : 'transparent',
+                shadowColor: p === page ? theme.primary : 'transparent',
+                shadowOpacity: p === page ? 0.35 : 0,
+                shadowRadius: 6, elevation: p === page ? 3 : 0,
+              }}
+            >
+              <Text style={{
+                fontSize: 13, fontWeight: '900',
+                color: p === page ? '#ffffff' : '#64748b',
+              }}>
+                {p}
+              </Text>
+            </Pressable>
+          )
+        )}
 
-        {/* ✅ Bouton suivant — couleur accent région */}
+        {/* › */}
         <Pressable
           onPress={() => goToPage(page + 1)}
           disabled={page === totalPages || loading}
           style={{
-            borderRadius: 18, paddingHorizontal: 20, paddingVertical: 12,
-            backgroundColor: page === totalPages || loading ? '#F1F5F9' : theme.accent,
+            width: 36, height: 36, borderRadius: 999,
+            alignItems: 'center', justifyContent: 'center',
+            backgroundColor: page === totalPages || loading ? '#F1F5F9' : theme.primary + '18',
           }}
         >
-          <Text style={{
-            fontWeight: '800',
-            color: page === totalPages || loading ? '#94a3b8' : '#0f172a',
-          }}>
-            Suiv. →
+          <Text style={{ fontSize: 15, fontWeight: '900', color: page === totalPages || loading ? '#cbd5e1' : theme.primary }}>
+            ›
           </Text>
         </Pressable>
       </View>
+
+      {/* Infos */}
+      <Text style={{ fontSize: 11, color: '#94a3b8', fontWeight: '600' }}>
+        Page {page} sur {totalPages} · {totalCount} cartes
+      </Text>
     </View>
   );
 
