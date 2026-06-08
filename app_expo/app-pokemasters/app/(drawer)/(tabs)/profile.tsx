@@ -1,5 +1,6 @@
-import { Animated, Easing, Modal, Pressable, ScrollView, StatusBar, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
+import { Animated, Easing, Modal, Pressable, ScrollView, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { RefreshControl } from 'react-native-gesture-handler';
 import { getRank, getNextRank } from '@/constants/ranks';
 import { useAuth } from '@/context/AuthContext';
@@ -232,14 +233,14 @@ function RegionPicker({
                                     <Pressable
                                         key={region.key}
                                         onPress={() => { onSelect(region.key); onClose(); }}
-                                        style={({ pressed }) => ({
+                                        android_ripple={{ color: region.primary + '30', borderless: false }}
+                                        style={{
                                             flexDirection: 'row', alignItems: 'center',
                                             borderRadius: 20, padding: 14,
                                             backgroundColor: active ? region.primary : themeBg,
                                             borderWidth: 1.5,
                                             borderColor: active ? region.primary : themeBorder,
-                                            opacity: pressed ? 0.85 : 1,
-                                        })}
+                                        }}
                                     >
                                         <View style={{
                                             width: 44, height: 44, borderRadius: 999,
@@ -337,6 +338,7 @@ export default function ProfileScreen() {
     const { width } = useWindowDimensions();
     const theme = useTheme();
 
+    const insets = useSafeAreaInsets();
     const isPhone = width < 640;
     const sidePad = isPhone ? 16 : 24;
     const maxWidth = Math.min(width, 760);
@@ -438,17 +440,15 @@ export default function ProfileScreen() {
 
     return (
         <View style={{ flex: 1, backgroundColor: theme.bg }}>
-            <StatusBar barStyle="light-content" />
-
             <ScrollView
-                contentContainerStyle={{ paddingBottom: 52 }}
+                contentContainerStyle={{ paddingBottom: insets.bottom + 24 }}
                 refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
                 showsVerticalScrollIndicator={false}
             >
 
                 {/* ══════════ BANNIÈRE RÉGION ══════════ */}
                 <Animated.View style={{
-                    height: isPhone ? 220 : 280,
+                    height: (isPhone ? 220 : 280) + insets.top,
                     transform: [{ scale: bannerScale }],
                     opacity: bannerOpacity,
                     overflow: 'hidden',
@@ -596,15 +596,16 @@ export default function ProfileScreen() {
                                 <Pressable
                                     onPress={() => setPickerVisible(true)}
                                     disabled={savingRegion}
-                                    style={({ pressed }) => ({
+                                    android_ripple={{ color: region.accent, borderless: false }}
+                                    style={{
                                         marginTop: 16, flexDirection: 'row', alignItems: 'center',
                                         justifyContent: 'center', gap: 8,
                                         borderRadius: 999, paddingVertical: 12,
                                         backgroundColor: region.primary,
-                                        opacity: pressed || savingRegion ? 0.75 : 1,
+                                        opacity: savingRegion ? 0.75 : 1,
                                         shadowColor: region.primary, shadowOpacity: 0.2,
                                         shadowRadius: 10, elevation: 3,
-                                    })}
+                                    }}
                                 >
                                     <Text style={{ fontSize: 16 }}>{region.emoji}</Text>
                                     <Text style={{ fontSize: 13, fontWeight: '900', color: '#ffffff', letterSpacing: 0.5 }}>
